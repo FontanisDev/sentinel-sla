@@ -7,7 +7,7 @@
     "sbom": "bun scripts/gen-sbom.mjs",
     "release": "bash scripts/build-release.sh",
     "dev": "next dev",
-    "build": "next build && rm -rf .next/standalone/.next/static .next/standalone/public && cp -r .next/static .next/standalone/.next/ && cp -r public .next/standalone/ && cp -r reports .next/standalone/ && cp -r .venv .next/standalone/",
+    "build": "next build && rm -rf .next/standalone/.next/static .next/standalone/public && cp -r .next/static .next/standalone/.next/ && cp -r public .next/standalone/ && cp -r reports .next/standalone/ && [ -d .venv ] && cp -r .venv .next/standalone/ || true",
     "start": "NODE_ENV=production HOSTNAME=0.0.0.0 bun .next/standalone/server.js 2>&1 | tee server.log",
     "worker": "bun src/worker/index.ts 2>&1 | tee worker.log",
     "lint": "eslint .",
