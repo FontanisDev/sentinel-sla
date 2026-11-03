@@ -1,0 +1,33 @@
+{
+  "product": "sentinel-sla",
+  "version": "2.0.0",
+  "sourceCommit": "efa9aeae4020fe111561249e24939ada4b7e3f41",
+  "sourceCommitShort": "efa9aea",
+  "builtAt": "2026-11-03T06:12:37.190Z",
+  "tag": null,
+  "note": "Built by scripts/build-release.sh from the git-tracked tree at sourceCommit plus the freshly generated SBOM. Rebuild from the same commit to reproduce; byte-identity is not guaranteed (gzip stores mtimes).",
+  "artefacts": [
+    {
+      "file": "release/sentinel-sla-2.0.0.tar.gz",
+      "bytes": 12007014,
+      "sha256": "cef2dfa6020cb3867250af85eee3c4770cfc595aa4994b96d146bdd3584a1836"
+    },
+    {
+      "file": "release/sentinel-sla-2.0.0.cdx.json",
+      "bytes": 99268,
+      "sha256": "a80a17350089c595edc6c599d36b455ba1f1f440522a489dd7e0ba1d7cf05d0c"
+    }
+  ],
+  "checksums": "release/SHA256SUMS (verify: cd release && sha256sum -c SHA256SUMS)",
+  "install": [
+    "tar xzf release/sentinel-sla-2.0.0.tar.gz",
+    "cd sentinel-sla-2.0.0/deploy",
+    "./install.sh"
+  ],
+  "sbom": {
+    "format": "CycloneDX",
+    "specVersion": "1.5",
+    "components": 195
+  },
+  "trackedFilesInTarball": 484
+}
