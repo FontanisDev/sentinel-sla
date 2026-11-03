@@ -1,10 +1,10 @@
 {
   "bomFormat": "CycloneDX",
   "specVersion": "1.5",
-  "serialNumber": "urn:uuid:42f5215b-b6a3-49e3-9f99-557952b04349",
+  "serialNumber": "urn:uuid:1a11cfcc-3061-4f3b-b354-8d2cee10f812",
   "version": 1,
   "metadata": {
-    "timestamp": "2026-11-03T06:12:35.772Z",
+    "timestamp": "2026-11-03T06:58:37.095Z",
     "tools": [
       {
         "vendor": "Sentinel-SLA",

@@ -1,21 +1,21 @@
 {
   "product": "sentinel-sla",
   "version": "2.0.0",
-  "sourceCommit": "efa9aeae4020fe111561249e24939ada4b7e3f41",
-  "sourceCommitShort": "efa9aea",
-  "builtAt": "2026-11-03T06:12:37.190Z",
+  "sourceCommit": "940b8cb514ece24e9e9949863d18299ef648efb4",
+  "sourceCommitShort": "940b8cb",
+  "builtAt": "2026-11-03T06:36:45.496Z",
   "tag": null,
   "note": "Built by scripts/build-release.sh from the git-tracked tree at sourceCommit plus the freshly generated SBOM. Rebuild from the same commit to reproduce; byte-identity is not guaranteed (gzip stores mtimes).",
   "artefacts": [
     {
       "file": "release/sentinel-sla-2.0.0.tar.gz",
-      "bytes": 12007014,
-      "sha256": "cef2dfa6020cb3867250af85eee3c4770cfc595aa4994b96d146bdd3584a1836"
+      "bytes": 12007051,
+      "sha256": "994d018b00e4b377e20478c994138a140cd817357d17a0f8c539adef401e92a5"
     },
     {
       "file": "release/sentinel-sla-2.0.0.cdx.json",
       "bytes": 99268,
-      "sha256": "a80a17350089c595edc6c599d36b455ba1f1f440522a489dd7e0ba1d7cf05d0c"
+      "sha256": "f582a52b500ba13ff7357e243e0c7afd43a8296e59d89aa6b26163bc9d9fde7d"
     }
   ],
   "checksums": "release/SHA256SUMS (verify: cd release && sha256sum -c SHA256SUMS)",
@@ -29,5 +29,5 @@
     "specVersion": "1.5",
     "components": 195
   },
-  "trackedFilesInTarball": 484
+  "trackedFilesInTarball": 486
 }
