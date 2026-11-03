@@ -11,7 +11,7 @@ checksums, plus a `docker save` image bundle for offline installs.
 | Artefact | Path | What it is | Where it is built |
 |---|---|---|---|
 | Install tarball | `release/sentinel-sla-2.0.0.tar.gz` | The git-tracked tree at the release commit + the SBOM. Literally installable: `tar xzf … && cd sentinel-sla-2.0.0/deploy && ./install.sh` | Build machine (this repo, `bash scripts/build-release.sh`) |
-| SBOM | `release/sentinel-sla-2.0.0.cdx.json` | CycloneDX 1.5 bill of materials — 196 components: the 189-package npm production closure (including the platform-specific `@img/*` libvips binaries), the 6 pinned monitoring-stack images and the Go exporter module | Build machine, included in the tarball too |
+| SBOM | `release/sentinel-sla-2.0.0.cdx.json` | CycloneDX 1.5 bill of materials — 195 components: the 188-package npm production closure (including the platform-specific `@img/*` libvips binaries), the 6 pinned monitoring-stack images and the Go exporter module | Build machine, included in the tarball too |
 | Checksums | `release/SHA256SUMS` | SHA-256 of the tarball + SBOM (the image bundle appends its own line, see §4) | Build machine |
 | Build manifest | `release/RELEASE-MANIFEST.json` | Provenance: version, source commit, build time, artefact sizes + SHA-256s, install instructions | Build machine |
 | Image bundle | `release/sentinel-sla-2.0.0-images.tar.gz` | `docker save` of the application image **plus every monitoring-stack image**, for air-gapped install | Any host with Docker and registry access (see §4) |

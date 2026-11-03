@@ -19,6 +19,10 @@ jobs:
         with:
           bun-version: latest
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
@@ -37,6 +41,11 @@ jobs:
       # docs/API.md is GENERATED from openapi/openapi.yaml — fail on drift.
       - name: API.md up to date with the OpenAPI document
         run: bun scripts/generate-api-docs.mjs --check
+
+      # Build release artefacts (tarball, SBOM, checksums, manifest) so that
+      # test_stack.sh can verify them (they are git-ignored).
+      - name: Build release artefacts
+        run: bun run release
 
       - name: Monitoring stack config validation
         run: bash tests/integration/test_stack.sh

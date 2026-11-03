@@ -256,7 +256,7 @@ run "wizard: settings pages are bilingual" test "$(cat "$ROOT/src/lib/i18n/en.ts
 run "wizard: DTO carries liveStatus + probeSource" grep -q "liveStatus: 'up' | 'down' | 'stale' | null" "$ROOT/src/lib/types.ts"
 run "exporter: tenant money rollup metric" grep -q "sentinel_tenant_penalty_tomans_total" "$ROOT/exporter/internal/collector/collector.go"
 run "exporter: live state metrics" grep -q "sentinel_service_live_stale" "$ROOT/exporter/internal/collector/collector.go"
-run "exporter: outbox depth never invented" grep -q "OutboxDepth           \*float64" "$ROOT/exporter/internal/collector/collector.go"
+run "exporter: outbox depth never invented" grep -qE "OutboxDepth[[:space:]]+\\*float64" "$ROOT/exporter/internal/collector/collector.go"
 run "exporter: metrics-mapping unit test exists" test -f "$ROOT/exporter/internal/collector/collector_test.go"
 run "exporter: executive-brief unit test exists" test -f "$ROOT/exporter/main_test.go"
 run "grafana: Contracts & Money dashboard provisioned" test -f "$ROOT/deploy/grafana/provisioning/dashboards/sentinel-contracts-money.json"
@@ -680,11 +680,11 @@ run "release: SBOM carries the 6 compose images with AGPL marked" bash -c "grep 
 run "release: SBOM carries the Go exporter module" grep -q 'pkg:golang/github.com/FontanisDev/sentinel-sla/exporter@2.0.0' "$ROOT/release/sentinel-sla-2.0.0.cdx.json"
 if [[ -f "$ROOT/release/SHA256SUMS" ]]; then
 run "release: SHA256SUMS verifies in place (tarball + SBOM)" bash -c "test -f '$ROOT/release/sentinel-sla-2.0.0.tar.gz' && cd '$ROOT/release' && sha256sum -c --quiet SHA256SUMS"
-run "release: release manifest records source commit, version and install steps" node -e "const m=require('$ROOT/release/RELEASE-MANIFEST.json');if(m.version!=='2.0.0')process.exit(1);if(!/^[0-9a-f]{40}\$/.test(m.sourceCommit))process.exit(1);require('child_process').execSync('git merge-base --is-ancestor '+m.sourceCommit+' HEAD',{cwd:'$ROOT'});if(m.install.join(' ').indexOf('./install.sh')<0)process.exit(1);if(m.sbom.components!==196)process.exit(1)"
+run "release: release manifest records source commit, version and install steps" node -e "const m=require('$ROOT/release/RELEASE-MANIFEST.json');if(m.version!=='2.0.0')process.exit(1);if(!/^[0-9a-f]{40}\$/.test(m.sourceCommit))process.exit(1);require('child_process').execSync('git merge-base --is-ancestor '+m.sourceCommit+' HEAD',{cwd:'$ROOT'});if(m.install.join(' ').indexOf('./install.sh')<0)process.exit(1);if(m.sbom.components!==195)process.exit(1)"
 run "release: tarball layout sane (required paths present, secrets/db/build outputs absent)" bash -c "T=\$(tar -tzf '$ROOT/release/sentinel-sla-2.0.0.tar.gz') && echo \"\$T\" | grep -q '^sentinel-sla-2.0.0/deploy/docker-compose.yml\$' && echo \"\$T\" | grep -q '^sentinel-sla-2.0.0/deploy/install.sh\$' && echo \"\$T\" | grep -q '^sentinel-sla-2.0.0/docs/RELEASE.md\$' && echo \"\$T\" | grep -q '^sentinel-sla-2.0.0/.env.example\$' && echo \"\$T\" | grep -q '^sentinel-sla-2.0.0/release/sentinel-sla-2.0.0.cdx.json\$' && ! echo \"\$T\" | grep -E '(^|/)\.env\$|(^|/)\.next/|(^|/)node_modules/|\.db\$|\.log\$' && ! echo \"\$T\" | grep -qE '^sentinel-sla-2.0.0/data/'"
 else skip "release: release artefacts not built (bun run release builds them)"; fi
 run "release: heavy release binaries stay out of git (tarball ignored)" bash -c "git -C '$ROOT' check-ignore -q release/sentinel-sla-2.0.0.tar.gz && git -C '$ROOT' ls-files release/ | grep -q 'cdx.json' && git -C '$ROOT' ls-files release/ | grep -q 'SHA256SUMS' && git -C '$ROOT' ls-files release/ | grep -q 'RELEASE-MANIFEST.json'"
-run "release: docs/RELEASE.md documents build, verify and air-gapped procedures" bash -c "grep -q 'bun run release' '$ROOT/docs/RELEASE.md' && grep -q 'sha256sum -c SHA256SUMS' '$ROOT/docs/RELEASE.md' && grep -q 'docker load' '$ROOT/docs/RELEASE.md' && grep -q '196 components' '$ROOT/docs/RELEASE.md'"
+run "release: docs/RELEASE.md documents build, verify and air-gapped procedures" bash -c "grep -q 'bun run release' '$ROOT/docs/RELEASE.md' && grep -q 'sha256sum -c SHA256SUMS' '$ROOT/docs/RELEASE.md' && grep -q 'docker load' '$ROOT/docs/RELEASE.md' && grep -q '195 components' '$ROOT/docs/RELEASE.md'"
 run "release: CHANGELOG documents the release artefacts" bash -c "grep -q 'Release artefacts' '$ROOT/CHANGELOG.md' && grep -q 'CycloneDX 1.5' '$ROOT/CHANGELOG.md' && grep -q 'docker-save-release.sh' '$ROOT/CHANGELOG.md'"
 
 # ── meta: the test file itself must stay honest ──────────────────────────────
@@ -795,8 +795,9 @@ TOOL_BONUS=0
 command -v docker >/dev/null 2>&1 && TOOL_BONUS=$((TOOL_BONUS + 2))
 command -v helm  >/dev/null 2>&1 && TOOL_BONUS=$((TOOL_BONUS + 2))
 command -v go    >/dev/null 2>&1 && TOOL_BONUS=$((TOOL_BONUS + 2))
-EXPECTED_TOTAL=$((581 + TOOL_BONUS))
-run "meta: check total matches the pinned count" bash -c "test $PASS -eq $((EXPECTED_TOTAL - 1))"
+EXPECTED_TOTAL=$((584 + TOOL_BONUS))
+TOTAL_RUN=$((PASS + FAIL + 1))
+run "meta: check total matches the pinned count" bash -c "test \$1 -eq \$2" _ "$TOTAL_RUN" "$EXPECTED_TOTAL"
 
 # >>> Append new check sections immediately above this line — the summary
 # ── summary ────────────────────────────────────────────────────────────────
