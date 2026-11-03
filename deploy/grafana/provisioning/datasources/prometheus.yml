@@ -1,0 +1,20 @@
+# ═══════════════════════════════════════════════════════════════════════════
+# Sentinel-SLA — Grafana datasource provisioning: Prometheus
+# Owner: Sentinel-SLA SRE
+# Fixed uid `prometheus` is referenced by the sentinel-overview dashboard.
+# ═══════════════════════════════════════════════════════════════════════════
+
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    uid: prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: false
+    jsonData:
+      timeInterval: 15s # match the Prometheus global scrape_interval
+      httpMethod: POST
+      manageAlerts: false # alerting is owned by Prometheus/Alertmanager, not Grafana

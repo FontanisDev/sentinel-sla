@@ -1,0 +1,75 @@
+# ═══════════════════════════════════════════════════════════════════════════
+# Sentinel-SLA — Alertmanager routing configuration
+# Owner: Sentinel-SLA SRE
+#
+# Routing philosophy (the product's core idea):
+#   * technical alerts  → Telegram channel of the on-call engineers
+#   * critical alerts   → ALSO sent to the Sentinel exporter webhook
+#     (/webhook/executive-alert) where they are translated into EXECUTIVE
+#     language (Tomans, lost transactions) before reaching the CEO channel.
+#
+# Iran connectivity note: Telegram API must be reached through the corporate
+# proxy from inside Iran; keep `api_url` pointing at https://api.telegram.org
+# (the official endpoint) and configure the proxy at the container/runtime
+# level (HTTPS_PROXY) rather than rewriting the endpoint.
+# ═══════════════════════════════════════════════════════════════════════════
+
+global:
+  resolve_timeout: 1m
+
+route:
+  # default receiver for anything not matching a sub-route
+  receiver: telegram-tech
+  # group alerts so on-call gets ONE message per (service, severity) episode
+  group_by: ["service", "severity"]
+  group_wait: 30s # wait before the first notification (dedupe/aggregate)
+  group_interval: 5m # minimum gap between notifications of a changed group
+  repeat_interval: 3h # re-notify while the alert keeps firing
+
+  routes:
+    # critical incidents go to the engineers' Telegram …
+    - matchers:
+        - severity="critical"
+      receiver: telegram-tech
+      continue: true # … AND fall through to the next matching sub-route
+
+    # … and to the executive translation webhook (Sentinel Go exporter),
+    # which converts "ServiceDown" into "۵ دقیقه قطعی = X تومان ضرر".
+    - matchers:
+        - severity="critical"
+      receiver: webhook-exec
+
+    # warnings are for the technical audience only — no need to wake the CEO
+    - matchers:
+        - severity="warning"
+      receiver: telegram-tech
+
+receivers:
+
+  # Technical audience: on-call engineers on Telegram (EN + FA summaries)
+  - name: telegram-tech
+    telegram_configs:
+      - bot_token: "PUT_YOUR_BOT_TOKEN_HERE" # @BotFather token — set per environment
+        chat_id: 123456789 # PLACEHOLDER — must be a NUMBER (a text value stops Alertmanager at start-up)
+        send_resolved: true
+        api_url: https://api.telegram.org # official endpoint; use HTTPS_PROXY from Iran
+        message: >-
+          {{ .Status | upper }} — {{ range .Alerts }}{{ .Labels.alertname }}:
+          {{ .Annotations.summary }}
+          {{ .Annotations.description }}{{ end }}
+
+  # Executive audience: Sentinel translates alerts into money before delivery
+  - name: webhook-exec
+    webhook_configs:
+      - url: http://sentinel-exporter:9108/webhook/executive-alert
+        send_resolved: true
+        max_alerts: 10
+
+# A critical alert for a service inhibits the warning alerts for the SAME
+# service — one episode, one page, no noise.
+inhibit_rules:
+  - source_matchers:
+      - severity="critical"
+    target_matchers:
+      - severity="warning"
+    equal: ["service"]

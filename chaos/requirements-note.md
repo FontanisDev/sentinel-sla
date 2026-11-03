@@ -1,0 +1,3 @@
+# Chaos suite requirements — none beyond Python itself
+
+The chaos tooling (`chaos_experiment.py`, driven by `auto_chaos.sh`) is deliberately **standard-library only** and targets **Python 3.8+** (urllib.request, json, time, argparse, sys, datetime): it must run on any on-call laptop or a minimal cron host without `pip install`, network-fetched wheels, or virtualenv setup — the same principle that keeps the industrial stack vendor-neutral. The only runtime dependencies are the Sentinel-SLA app's REST API (`--base`, default `http://localhost:3000`) and, for the weekly self-test loop, `python3` on PATH; `auto_chaos.sh` additionally needs `bash` and coreutils (`date`) and intentionally avoids `jq`/`curl` by using Python for JSON discovery.

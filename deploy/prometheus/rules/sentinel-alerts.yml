@@ -1,0 +1,107 @@
+# ═══════════════════════════════════════════════════════════════════════════
+# Sentinel-SLA — Prometheus alert & recording rules
+# Owner: Sentinel-SLA SRE
+# Every alert is BILINGUAL (English + فارسی) and financial where relevant:
+# this is the bridge between "service is down" and "X Tomans lost".
+# Data sources:
+#   probe_*                  → blackbox exporter (fintech-blackbox job)
+#   sentinel_service_*       → custom Go exporter (business metrics)
+# Runbook: https://runbook.sentinel.example.ir (fictional demo URL)
+# ═══════════════════════════════════════════════════════════════════════════
+
+groups:
+
+  # ── Availability: is the money pipeline up? ───────────────────────────────
+  - name: sentinel-availability
+    rules:
+
+      # A probed fintech endpoint has been failing for a full minute.
+      - alert: ServiceDown
+        expr: probe_success == 0
+        for: 1m
+        labels:
+          severity: critical
+          team: sre
+        annotations:
+          summary: "Service DOWN — {{ $labels.instance }}"
+          description: >-
+            Service {{ $labels.instance }} has been failing blackbox probes for
+            more than 1 minute. Every minute of downtime for a Tier-1 service
+            costs lost transactions plus contractual SLA penalties in Tomans.
+            خلاصه: سرویس {{ $labels.instance }} بیش از یک دقیقه است که از دسترس
+            خارج شده است — احتمال از دست رفتن تراکنش و جریمه قراردادی SLA وجود دارد.
+            Runbook: https://runbook.sentinel.example.ir/service-down
+            Financial impact: see the Sentinel executive dashboard (Revenue loss
+            & SLA penalty exposure panels).
+
+      # The endpoint answers but is consistently slow (bad UX, tx timeouts).
+      - alert: ServiceDegraded
+        expr: avg_over_time(probe_duration_seconds[5m]) > 1
+        for: 5m
+        labels:
+          severity: warning
+          team: sre
+        annotations:
+          summary: "Service DEGRADED (slow) — {{ $labels.instance }}"
+          description: >-
+            Average probe latency for {{ $labels.instance }} exceeded 1s over the
+            last 5 minutes. Payment timeouts may follow.
+            خلاصه: میانگین زمان پاسخ سرویس {{ $labels.instance }} در ۵ دقیقه
+            اخیر از ۱ ثانیه گذشته است.
+            Runbook: https://runbook.sentinel.example.ir/service-degraded
+
+  # ── Business health: what the CFO cares about ────────────────────────────
+  - name: sentinel-business
+    rules:
+
+      # More than 5% of requests are failing for 2 minutes.
+      - alert: HighErrorRate
+        expr: sentinel_service_error_rate > 0.05
+        for: 2m
+        labels:
+          severity: warning
+          team: sre
+        annotations:
+          summary: "High error rate — {{ $labels.service }}"
+          description: >-
+            Service {{ $labels.service }} error rate is {{ $value | humanizePercentage }}
+            (>5% for 2m). Transactions are failing at the payment edge.
+            خلاصه: نرخ خطای سرویس {{ $labels.service }} بیش از ۵٪ است.
+            Runbook: https://runbook.sentinel.example.ir/high-error-rate
+
+      # Uptime below the 99.9% contractual SLA target.
+      - alert: SLABudgetBurn
+        expr: sentinel_service_uptime_ratio < 0.999
+        for: 5m
+        labels:
+          severity: critical
+          team: sre
+        annotations:
+          summary: "SLA budget burning — {{ $labels.service }}"
+          description: >-
+            Service {{ $labels.service }} uptime ratio ({{ $value | humanizePercentage }})
+            has been below the 99.9% contractual SLA target for 5 minutes. If the
+            monthly budget is exhausted, the SLA penalty clause activates and the
+            exposure in Tomans grows with every additional minute of downtime
+            (see sentinel_sla_penalty_tomans_total).
+            خلاصه: نسبت پایداری سرویس {{ $labels.service }} زیر هدف قراردادی
+            ۹۹.۹٪ است — خطر فعال شدن بند جریمه SLA و افزایش ضرر مالی (تومان).
+            Runbook: https://runbook.sentinel.example.ir/sla-budget-burn
+
+      # Transactions are being lost RIGHT NOW at a burning rate.
+      - alert: TransactionLossBurning
+        expr: rate(sentinel_transactions_lost_total[5m]) > 10
+        labels:
+          severity: critical
+          team: sre
+        annotations:
+          summary: "Transaction loss burning — {{ $labels.service }}"
+          description: >-
+            Service {{ $labels.service }} is currently losing more than 10
+            transactions per second (5m rate: {{ $value | humanize }} tx/s).
+            EXECUTIVE TRANSLATION: at current average transaction value this is
+            direct revenue evaporating — check the Revenue loss (Tomans) panel
+            and the SLA penalty exposure table on the Sentinel dashboard.
+            خلاصه: سرویس {{ $labels.service }} در حال از دست دادن بیش از ۱۰
+            تراکنش در ثانیه است — درآمد مستقیم در حال تبخیر است.
+            Runbook: https://runbook.sentinel.example.ir/transaction-loss

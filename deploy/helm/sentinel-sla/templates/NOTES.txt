@@ -1,0 +1,64 @@
+{{- /*
+═══════════════════════════════════════════════════════════════════════════
+Sentinel-SLA — post-install notes
+Rendered by `helm install` / `helm upgrade --install`.
+═══════════════════════════════════════════════════════════════════════════
+*/}}
+Sentinel-SLA release {{ .Chart.Name }} {{ .Chart.Version }} (app v{{ .Chart.AppVersion }}) is deployed.
+
+{{- if .Values.exporter.enabled }}
+The custom business-metrics exporter is running as a sidecar (port metrics/9108).
+{{- end }}
+
+1. Check the pods are healthy:
+   kubectl get pods -l app.kubernetes.io/instance={{ .Release.Name }}
+   Probes use the public health endpoints /api/health/live and /api/health/ready.
+
+2. Port-forward to the dashboard UI:
+   kubectl port-forward svc/{{ .Release.Name }}-{{ .Chart.Name }} 3000:{{ .Values.service.port }}
+   → open http://localhost:3000
+   First run: the setup wizard at /setup creates the owner account
+   (only available while the database has zero users).
+
+3. {{- if eq .Values.sentinel.mode "live" }} Live mode is enabled — configure the
+   Prometheus connection (URL + auth) in Settings → Integrations after the
+   first login; it is stored in the database, not in env vars.
+   {{- else }} Demo mode is active — the built-in simulation engine drives the
+   dashboard with no external Prometheus. Switch with
+   `helm upgrade {{ .Release.Name }} --set sentinel.mode=live`.
+   {{- end }}
+
+4. Verify the exporter is publishing financial metrics:
+   kubectl port-forward svc/{{ .Release.Name }}-{{ .Chart.Name }} 9108:9108
+   curl -s localhost:9108/metrics | grep sentinel_
+
+{{- if .Values.serviceMonitor.enabled }}
+5. The ServiceMonitor is enabled — make sure a Prometheus Operator release
+   named "{{ .Values.serviceMonitor.release }}" is running and selecting it
+   (label release={{ .Values.serviceMonitor.release }}), then check targets
+   in Prometheus → Status → Targets.
+{{- end }}
+
+{{- if .Values.ingress.enabled }}
+6. Ingress is enabled:
+{{- range .Values.ingress.hosts }}
+   → http{{ if $.Values.ingress.tls }}s{{ end }}://{{ .host }}
+{{- end }}
+   Ensure the ingress class "{{ .Values.ingress.className }}" controller is installed.
+   For TLS termination options (Caddy/Nginx, automatic or self-signed certs)
+   see docs/INSTALL.md § "TLS reverse proxy".
+{{- else }}
+6. Ingress is DISABLED (service type: {{ .Values.service.type }}) — enable in
+   values.yaml when the TLS termination point is ready (see docs/INSTALL.md
+   § "TLS reverse proxy").
+{{- end }}
+
+{{- if or .Values.notify.telegramBotToken .Values.notify.baleBotToken }}
+7. Notification tokens are wired from Secret
+   "{{ default (printf "%s-%s" .Release.Name "notify") .Values.notify.existingSecret }}".
+   Chat IDs are configured per channel in Settings → Notifications (stored in
+   the database). Ack links are signed with SENTINEL_ACK_SECRET.
+{{- end }}
+
+Reminder: run the weekly chaos self-test (chaos/auto_chaos.sh) to validate
+the MTTD < 60 s detection gate before trusting SLA numbers.

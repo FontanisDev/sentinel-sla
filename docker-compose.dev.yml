@@ -1,0 +1,34 @@
+# EXPERIMENTAL — PostgreSQL is NOT supported yet: ~100 raw SQL statements in
+# src/server use SQLite identifier rules (unquoted, case-insensitive names), so the
+# app fails on Postgres ("relation tenant does not exist"). Use SQLite (default).
+# This file only exists for the port-to-Postgres work.
+#
+# Development stack: PostgreSQL 16 only. The app runs on the host
+# (`bun run dev` / `bun run worker`) against this database.
+#
+#   docker compose -f docker-compose.dev.yml up -d
+#   DATABASE_URL=postgresql://sentinel:sentinel-dev@localhost:5432/sentinel \
+#     bun x prisma db push --schema prisma/schema.postgres.prisma
+#   DATABASE_URL=... bun run dev
+#
+# Demo/SQLite development needs nothing from this file — just `bun run dev`.
+
+services:
+  postgres:
+    image: postgres:16-alpine        # pin by digest for production
+    environment:
+      POSTGRES_USER: sentinel
+      POSTGRES_PASSWORD: sentinel-dev
+      POSTGRES_DB: sentinel
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-dev-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sentinel -d sentinel"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  postgres-dev-data:

@@ -1,0 +1,79 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# env files (can opt-in for committing if needed)
+.env*
+!.env.example
+!deploy/.env.example
+
+# local data and generated files
+db/*.db
+db/*.db-journal
+db/reports/
+.venv/
+
+# vercel
+.vercel
+
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+local-*
+*.log
+dev.log
+dev.out.log
+/test/
+
+server.log
+# python bytecode
+__pycache__/
+*.pyc
+
+# playwright artifacts
+test-results/
+playwright-report/
+data/
+scripts/.qa-token
+.playwright-auth/
+
+# local backups + scratch install trees
+/backups/
+/tmp-*/
+
+# release artefacts — heavy binaries stay out of git; the SBOM,
+# SHA256SUMS and RELEASE-MANIFEST.json inside release/ ARE committed
+release/*.tar.gz
+release/.stage/
+
+# sentinel-doctor bundles are runtime artefacts, never committed
+/doctor/

@@ -1,0 +1,38 @@
+# Sentinel-SLA — Spectral ruleset for openapi/openapi.yaml
+#
+# Extends the standard OpenAPI 3.0 ruleset with Sentinel house rules.
+# Run: bun run lint:spec   (scripts/lint-openapi.mjs wraps the spectral CLI)
+# Wired into CI (.github/workflows/ci.yml).
+
+extends:
+  - spectral:oas
+
+rules:
+  # House: keep docs navigable
+  operation-tag-defined: true
+  operation-operationId-unique: error
+  operation-description: error
+  info-contact: error
+  info-license: error
+
+  # Truth: the document version must be the release version (package.json).
+  sentinel/spec-version-matches-release:
+    description: info.version must equal the product version in package.json (2.0.0).
+    severity: error
+    given: $.info.version
+    then:
+      function: pattern
+      functionOptions:
+        match: ^2\.0\.0$
+
+  # Truth: error contract — every documented 401 must render the shared
+  # ErrorEnvelope (health probes document their own fail shapes).
+  sentinel/error-envelope-on-401:
+    description: Any operation that can return 401 must use ErrorEnvelope content.
+    severity: error
+    given: $.paths[*][*].responses.401
+    then:
+      field: content.application/json.schema.$ref
+      function: pattern
+      functionOptions:
+        match: ^#/components/schemas/ErrorEnvelope$

@@ -1,0 +1,47 @@
+{{- /*
+═══════════════════════════════════════════════════════════════════════════
+Sentinel-SLA — Ingress (guarded)
+Owner: Sentinel-SLA SRE
+Standard ingress with an `enabled` guard; supports the nginx class plus
+className override, per-host path rules and optional TLS blocks. Enable in
+production — Iranian fintech traffic should terminate TLS here (OWASP ASVS
+L1: TLS for all communications).
+═══════════════════════════════════════════════════════════════════════════
+*/}}
+{{- if .Values.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ .Release.Name }}-{{ .Chart.Name }}
+  labels:
+    app.kubernetes.io/name: {{ .Chart.Name }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+  {{- with .Values.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- with .Values.ingress.className }}
+  ingressClassName: {{ . }}
+  {{- end }}
+  {{- with .Values.ingress.tls }}
+  tls:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  rules:
+    {{- range .Values.ingress.hosts }}
+    - host: {{ .host | quote }}
+      http:
+        paths:
+          {{- range .paths }}
+          - path: {{ .path }}
+            pathType: {{ .pathType }}
+            backend:
+              service:
+                name: {{ $.Release.Name }}-{{ $.Chart.Name }}
+                port:
+                  name: http
+          {{- end }}
+    {{- end }}
+{{- end }}

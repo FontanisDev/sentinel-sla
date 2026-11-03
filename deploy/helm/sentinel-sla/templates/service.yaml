@@ -1,0 +1,32 @@
+{{- /*
+═══════════════════════════════════════════════════════════════════════════
+Sentinel-SLA — Service (ClusterIP)
+Owner: Sentinel-SLA SRE
+Exposes the app (http) and the exporter metrics port (metrics) inside the
+cluster. The ServiceMonitor selects this service by its labels.
+═══════════════════════════════════════════════════════════════════════════
+*/}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-{{ .Chart.Name }}
+  labels:
+    app.kubernetes.io/name: {{ .Chart.Name }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - name: http
+      port: {{ .Values.service.port }}
+      targetPort: http
+      protocol: TCP
+    {{- if .Values.exporter.enabled }}
+    - name: metrics
+      port: 9108
+      targetPort: metrics
+      protocol: TCP
+    {{- end }}
+  selector:
+    app.kubernetes.io/name: {{ .Chart.Name }}
+    app.kubernetes.io/instance: {{ .Release.Name }}

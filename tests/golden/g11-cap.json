@@ -1,0 +1,64 @@
+{
+  "id": "g11-cap",
+  "title": "Penalty cap: a 100 000 000 IRR tier penalty is capped at 50 000 000",
+  "human": "A 2 000 000 000 IRR fee with the 5 % tier would cost 100 000 000 IRR, but the contract caps the penalty at 50 000 000 IRR — the payable number is the cap.",
+  "kind": "evaluate",
+  "contract": {
+    "version": 1,
+    "effectiveFrom": "2026-01-01T00:00:00.000Z",
+    "tenantId": "tenant-demo",
+    "serviceKey": null,
+    "targetAvailabilityPct": 99.9,
+    "windowKind": "gregorian-month",
+    "minChargeableOutageSec": 0,
+    "penalty": {
+      "mode": "tiers",
+      "tiers": [
+        {
+          "belowPct": 99.9,
+          "penaltyPct": 5
+        },
+        {
+          "belowPct": 99.5,
+          "penaltyPct": 15
+        },
+        {
+          "belowPct": 99,
+          "penaltyPct": 30
+        }
+      ]
+    },
+    "monthlyFeeRials": 2000000000,
+    "penaltyCapRials": 50000000,
+    "graceMinutes": 0,
+    "excludePlanned": true,
+    "excludeExternal": true
+  },
+  "moneyModel": null,
+  "outages": [
+    {
+      "id": "i1",
+      "startSec": 0,
+      "endSec": 3600,
+      "category": "chargeable"
+    }
+  ],
+  "window": {
+    "startSec": 0,
+    "endSec": 2592000
+  },
+  "expect": {
+    "chargeableSec": 3600,
+    "plannedSec": 0,
+    "externalSec": 0,
+    "chargeableAfterGraceSec": 3600,
+    "naiveAvailabilityPct": 99.8611,
+    "contractualAvailabilityPct": 99.8611,
+    "differencePct": 0,
+    "tierPenaltyPct": 5,
+    "penaltyBeforeCapRials": 100000000,
+    "penaltyRials": 50000000,
+    "targetMet": false,
+    "moneyFinalRials": null
+  }
+}

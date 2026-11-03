@@ -1,0 +1,56 @@
+# ═══════════════════════════════════════════════════════════════════════════
+# Sentinel-SLA — Promtail 3.1 configuration
+# Owner: Sentinel-SLA SRE
+#
+# Two log sources feed Loki:
+#   1. Docker containers discovered via the read-only docker socket —
+#      everything running in the sentinel-net stack, labelled
+#      job="fintech-services" so the Grafana "Recent service logs" panel
+#      (`{job="fintech-services"} | json`) picks them up.
+#   2. /var/log on the host (syslog-ish operational logs).
+# All lines are pushed to http://loki:3100/loki/api/v1/push.
+# ═══════════════════════════════════════════════════════════════════════════
+
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+    backoff_config:
+      min_period: 500ms
+      max_period: 5m
+      max_retries: 10
+
+scrape_configs:
+
+  # ── Docker container logs (the fintech services + observability stack) ───
+  - job_name: fintech-services
+    docker_sd_configs:
+      - host: unix:///var/run/docker.sock
+        refresh_interval: 15s
+    relabel_configs:
+      # job label must be exactly fintech-services (Grafana logs panel depends on it)
+      - source_labels: [__meta_docker_container_name]
+        regex: /(.*) # strip the leading slash of the container name
+        target_label: container
+      - target_label: job
+        replacement: fintech-services
+      # keep compose service name as a label for easy filtering
+      - source_labels: [__meta_docker_container_label_com_docker_compose_service]
+        target_label: compose_service
+    pipeline_stages:
+      - docker: {}
+
+  # ── Host /var/log (operational logs: syslog, kernel, cron) ───────────────
+  - job_name: varlog
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: varlog
+          host: sentinel-host
+          __path__: /var/log/*.log

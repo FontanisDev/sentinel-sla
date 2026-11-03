@@ -1,0 +1,416 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Sentinel-SLA — "Foundry" design system (docs/DESIGN-SYSTEM.md).
+
+   Single source of truth for colour. Hex literals are FORBIDDEN in components
+   (the only exception is src/components/sentinel/palette.ts for chart strokes,
+   which must mirror these tokens). One brand accent; colour carries meaning.
+
+   Dark theme is the default (control room); light theme is "oat paper".
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Local fonts (OFL, bundled in /public/fonts — no CDN, offline-first) ──── */
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url("/fonts/inter-latin-wght-normal.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Vazirmatn";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url("/fonts/vazirmatn-arabic-wght-normal.woff2") format("woff2");
+  unicode-range: U+0600-06FF, U+0750-077F, U+08A0-08FF, U+FB50-FDFF, U+FE70-FEFF;
+}
+@font-face {
+  font-family: "Vazirmatn";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url("/fonts/vazirmatn-latin-wght-normal.woff2") format("woff2");
+}
+@font-face {
+  font-family: "JetBrains Mono";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 800;
+  src: url("/fonts/jetbrains-mono-latin-wght-normal.woff2") format("woff2");
+}
+
+@theme inline {
+  /* fonts (local files above — no next/font/google anywhere) */
+  --font-sans: "Inter", "Vazirmatn", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", monospace;
+
+  /* ── shadcn semantic aliases → Foundry tokens (keeps ui/* working) ── */
+  --color-background: var(--bg-app);
+  --color-foreground: var(--text-1);
+  --font-sans: var(--font-stack-sans);
+  --font-mono: var(--font-stack-mono);
+  --color-card: var(--bg-surface);
+  --color-card-foreground: var(--text-1);
+  --color-popover: var(--bg-raised);
+  --color-popover-foreground: var(--text-1);
+  /* brand accent — the ONE accent (doc §2); shadcn "accent" stays neutral */
+  --color-brand: var(--accent);
+  --color-brand-hover: var(--accent-hover);
+  --color-brand-subtle: var(--accent-subtle);
+  --color-brand-contrast: var(--accent-contrast);
+  --color-brand-ink: var(--accent-ink);
+  --color-primary: var(--accent);
+  --color-primary-foreground: var(--accent-contrast);
+  --color-secondary: var(--bg-raised);
+  --color-secondary-foreground: var(--text-1);
+  --color-muted: var(--bg-raised);
+  --color-muted-foreground: var(--text-2);
+  /* shadcn hover surface — deliberately NOT the brand accent */
+  --color-accent: var(--bg-raised);
+  --color-accent-foreground: var(--text-1);
+  --color-destructive: var(--crit);
+  --color-border: var(--line);
+  --color-input: var(--line);
+  --color-ring: var(--info);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-app: var(--bg-app);
+  --color-nav: var(--bg-nav);
+  --color-surface: var(--bg-surface);
+  --color-raised: var(--bg-raised);
+  --color-inset: var(--bg-inset);
+  --color-t1: var(--text-1);
+  --color-t2: var(--text-2);
+  --color-t3: var(--text-3);
+  --color-info: var(--info);
+  --color-ok: var(--ok);
+  --color-warn: var(--warn);
+  --color-crit: var(--crit);
+  --color-info-subtle: var(--info-subtle);
+  --color-ok-subtle: var(--ok-subtle);
+  --color-warn-subtle: var(--warn-subtle);
+  --color-crit-subtle: var(--crit-subtle);
+  /* legacy aliases used by pre-Foundry components (migrated progressively) */
+  --color-surface-1: var(--bg-surface);
+  --color-surface-2: var(--bg-raised);
+  --color-surface-3: var(--bg-inset);
+  --color-success: var(--ok);
+  --color-warning: var(--warn);
+  --color-critical: var(--crit);
+  /* data-series palette (doc §2 rule 4) */
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-chart-6: var(--chart-6);
+  --color-sidebar: var(--bg-nav);
+  --color-sidebar-foreground: var(--text-1);
+  --color-sidebar-primary: var(--accent);
+  --color-sidebar-primary-foreground: var(--accent-contrast);
+  --color-sidebar-accent: var(--bg-raised);
+  --color-sidebar-accent-foreground: var(--text-1);
+  --color-sidebar-border: var(--line);
+  --color-sidebar-ring: var(--info);
+
+  /* radius: 4 px controls, 6 px cards — no larger radius anywhere */
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: var(--radius);
+}
+
+/* ── DARK (default): neutral graphite control room ────────────────────────── */
+:root,
+.dark {
+  --font-stack-sans: "Inter", "Vazirmatn", ui-sans-serif, system-ui, sans-serif;
+  --font-stack-mono: "JetBrains Mono", ui-monospace, monospace;
+  --radius: 0.375rem;
+
+  --bg-app: #0d1215;
+  --bg-nav: #0a0f11;
+  --bg-surface: #131a1e;
+  --bg-raised: #1a2327;
+  --bg-inset: #0f1519;
+  --line: #26323a;
+  --line-strong: #3a4953;
+  --text-1: #e8edef;
+  --text-2: #9fb0b8;
+  --text-3: #7d8f99; /* contrast audit: bumped from #6b7c85 — was 4.06:1 on surface, needs ≥ 4.5:1 (design doc §8) */
+  --accent: #f2562b;
+  --accent-hover: #ff6a40;
+  /* brand-coloured TEXT: the accent itself on dark (>4.5:1), a darker shade on light */
+  --accent-ink: #f2562b;
+  --accent-subtle: #2b1812;
+  /* contrast audit: white on #f2562b was 3.42:1 (< 4.5) — ink on accent passes at 5.51:1 */
+  --accent-contrast: #0d1215;
+  --info: #3fa9c9;
+  --ok: #38b57a;
+  --warn: #e6a532;
+  /* contrast audit: #e5484d was 4.49:1 on surface (< 4.5) — lightened for AA */
+  --crit: #f77b7f;
+  /* 14 % alpha of the base on the card surface */
+  --ok-subtle: rgba(56, 181, 122, 0.14);
+  --warn-subtle: rgba(230, 165, 50, 0.14);
+  --crit-subtle: rgba(247, 123, 127, 0.14);
+  --info-subtle: rgba(63, 169, 201, 0.14);
+  /* data-series palette (dark) */
+  --chart-1: #3fa9c9;
+  --chart-2: #f2562b;
+  --chart-3: #38b57a;
+  --chart-4: #e6a532;
+  --chart-5: #9b8ce8;
+  --chart-6: #c97bb2;
+}
+
+/* ── LIGHT: "oat paper" ───────────────────────────────────────────────────── */
+:root:not(.dark) {
+  --bg-app: #efede8;
+  --bg-nav: #e6e3dc;
+  --bg-surface: #faf9f6;
+  --bg-raised: #f2f0eb;
+  --bg-inset: #ffffff;
+  --line: #d6d2c8;
+  --line-strong: #b9b4a7;
+  --text-1: #14201f;
+  --text-2: #4a5a5c;
+  --text-3: #56646a; /* contrast audit: bumped from #6c7a7b — was 3.48:1 on nav, needs ≥ 4.5:1 (design doc §8) */
+  --accent: #c33712; /* contrast audit: darkened from #d8401a — white text was 4.4987:1 (< 4.5), now 5.42:1 */
+  --accent-hover: #d04315;
+  --accent-subtle: #fbe9e3;
+  --accent-ink: #b83a12; /* 5.1:1 on the light surface; the brand accent is 3.1:1 */
+  --accent-contrast: #ffffff;
+  --info: #17718f;
+  /* contrast audit bumps — each was < 4.5:1 on its worst realistic surface */
+  --ok: #125c3a; /* was #1e8a58 (4.13:1 on surface) → 7.62:1; badge-on-tint 6.30:1 sRGB */
+  --warn: #7a5408; /* was #b27a0c (3.51:1 on surface) → 6.44:1; badge-on-tint 5.40:1 */
+  --crit: #b3272c; /* was #c62f34 (5.17 ok but 4.11:1 on crit-tinted warn rows) → 6.15:1 */
+  --ok-subtle: rgba(18, 92, 58, 0.12);
+  --warn-subtle: rgba(122, 84, 8, 0.12);
+  --crit-subtle: rgba(179, 39, 44, 0.12);
+  --info-subtle: rgba(23, 113, 143, 0.12);
+  /* data-series palette (darker 600-level versions for light) */
+  --chart-1: #17718f;
+  --chart-2: #d8401a;
+  --chart-3: #1e8a58;
+  --chart-4: #b27a0c;
+  --chart-5: #6d5bc7;
+  --chart-6: #a54e86;
+}
+
+@layer base {
+  * {
+    border-color: var(--line);
+    outline-color: color-mix(in srgb, var(--info) 50%, transparent);
+  }
+  html {
+    /* Foundry default body size: 14/20; dense tables use 13/20 (DataTable) */
+    font-size: 16px;
+  }
+  body {
+    background: var(--bg-app);
+    color: var(--text-1);
+    font-family: var(--font-stack-sans);
+    font-size: 0.875rem; /* 14/20 */
+    line-height: 1.25rem;
+    -webkit-font-smoothing: antialiased;
+    /* Tabular figures everywhere money or time is shown (doc §3) */
+    font-variant-numeric: tabular-nums;
+  }
+  /* Visible focus ring: 2 px --info with 2 px offset (doc §8) */
+  :focus-visible {
+    outline: 2px solid var(--info);
+    outline-offset: 2px;
+  }
+  ::selection {
+    background: color-mix(in srgb, var(--info) 30%, transparent);
+  }
+  /* Print: clean light-theme output (doc §7 rule 9) */
+  @media print {
+    html,
+    body {
+      background: #faf9f6 !important;
+      color: #14201f !important;
+    }
+    nav,
+    aside {
+      display: none !important;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+/* ── Bilingual (EN ⇆ FA) typography ─────────────────────────────────────────
+   Persian UI text uses bundled Vazirmatn; digits are Persian via the formatter
+   (never mixed Latin digits except in IDs and code — doc §3). */
+.font-fa,
+.font-fa button,
+.font-fa input,
+.font-fa select,
+.font-fa textarea {
+  font-family: "Vazirmatn", "Inter", ui-sans-serif, system-ui, sans-serif;
+  /* doc §3: line-height +2 px in Persian mode */
+}
+.font-fa p,
+.font-fa span,
+.font-fa li {
+  line-height: calc(1.25rem + 2px);
+}
+.font-fa .font-mono,
+.font-fa code,
+.font-fa .tabular-nums {
+  font-family: var(--font-stack-mono);
+}
+
+/* ── Custom scrollbars (thin, neutral) ────────────────────────────────────── */
+.sentinel-scroll-native {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+}
+.sentinel-scroll-native::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.sentinel-scroll-native::-webkit-scrollbar-track {
+  background: transparent;
+}
+.sentinel-scroll-native::-webkit-scrollbar-thumb {
+  background: var(--line-strong);
+  border-radius: 9999px;
+}
+.sentinel-scroll-native::-webkit-scrollbar-thumb:hover {
+  background: var(--text-3);
+}
+.sentinel-scroll [data-slot="scroll-area-scrollbar"] {
+  width: 6px;
+  padding: 2px;
+}
+.sentinel-scroll [data-slot="scroll-area-scrollbar"][data-orientation="horizontal"] {
+  height: 6px;
+  width: auto;
+}
+.sentinel-scroll [data-slot="scroll-area-thumb"] {
+  background: var(--line-strong);
+  border-radius: 9999px;
+}
+.sentinel-scroll [data-slot="scroll-area-thumb"]:hover {
+  background: var(--text-3);
+}
+
+/* ── Live indicator pulse (120–160 ms transitions elsewhere; this is a
+      status heartbeat, disabled under prefers-reduced-motion) ─────────────── */
+@keyframes sentinel-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.45;
+    transform: scale(0.8);
+  }
+}
+.animate-status-pulse {
+  animation: sentinel-pulse 1.6s ease-in-out infinite;
+}
+
+/* One-shot flash when a new alert lands (restarted imperatively via JS). */
+@keyframes sentinel-flash {
+  0% {
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--crit) 40%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 1px transparent;
+  }
+}
+.sentinel-flash {
+  animation: sentinel-flash 1.6s ease-out;
+}
+
+/* 1 px top edge on cards — borders, not shadows (doc §4). */
+.sentinel-card-highlight::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 1px;
+  background: var(--line);
+  pointer-events: none;
+}
+
+/* ── Skeleton shimmer (neutral token sweep) ───────────────────────────────── */
+@keyframes sentinel-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+.sentinel-shimmer {
+  background-image: linear-gradient(
+    110deg,
+    transparent 35%,
+    color-mix(in srgb, var(--text-3) 14%, transparent) 50%,
+    transparent 65%
+  );
+  background-size: 200% 100%;
+  background-repeat: no-repeat;
+  animation: sentinel-shimmer 2.4s ease-in-out infinite;
+}
+
+/* Soft row-hover for dense analytic rows (neutral, token-based) */
+.sentinel-row-hover:hover {
+  background: var(--bg-raised);
+}
+
+/* Avatar initials as generated content (not DOM text): keeps the host
+   control's accessible name clean — WCAG 2.5.3 label-in-name + axe
+   label-content-name-mismatch see only the real text nodes. */
+.sentinel-initials::after {
+  content: attr(data-initials);
+}
+
+/* Sonner rich-color toasts re-tinted with our token pairs. The library's
+   hardcoded #e60000/#fff0f0 error pairing measures 4.34:1 (< 4.5) — caught by
+   the Lighthouse audit when a demo error toast was on screen mid-audit.
+   Doubled attribute selectors out-specify sonner's own rich-colors rules. */
+[data-sonner-toast][data-sonner-toast][data-rich-colors='true'][data-type='error'] {
+  background: var(--crit-subtle);
+  border-color: color-mix(in srgb, var(--crit) 30%, transparent);
+  color: var(--crit);
+}
+[data-sonner-toast][data-sonner-toast][data-rich-colors='true'][data-type='success'] {
+  background: var(--ok-subtle);
+  border-color: color-mix(in srgb, var(--ok) 30%, transparent);
+  color: var(--ok);
+}
+[data-sonner-toast][data-sonner-toast][data-rich-colors='true'][data-type='warning'] {
+  background: var(--warn-subtle);
+  border-color: color-mix(in srgb, var(--warn) 30%, transparent);
+  color: var(--warn);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-status-pulse,
+  .sentinel-flash,
+  .sentinel-shimmer {
+    animation: none;
+  }
+  .sentinel-shimmer {
+    background-image: none;
+    background-color: color-mix(in srgb, var(--text-3) 10%, transparent);
+  }
+}

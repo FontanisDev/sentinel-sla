@@ -1,0 +1,4 @@
+key,name,nameFa,tenant,slaTarget,penaltyBase,penaltyPerMinute,criticality
+psp-gateway,Payment Gateway,درگاه پرداخت,acme-bank,0.999,50000000,7500000,critical
+core-ledger,Core Ledger,دفتر مرکزی,acme-bank,0.995,30000000,4000000,high
+mobile-wallet,Mobile Wallet,کیف پول موبایل,acme-bank,0.9975,20000000,3000000,medium

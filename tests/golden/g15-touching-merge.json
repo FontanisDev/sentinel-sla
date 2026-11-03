@@ -1,0 +1,70 @@
+{
+  "id": "g15-touching-merge",
+  "title": "Touching outages merge: 60 s + 60 s becomes one 120 s segment",
+  "human": "Two consecutive one-minute outages (10:00:00–10:01:00 and 10:01:00–10:02:00) are one 120-second outage for availability: 99.9954 % — still above the 99.9 % promise, so no penalty.",
+  "kind": "evaluate",
+  "contract": {
+    "version": 1,
+    "effectiveFrom": "2026-01-01T00:00:00.000Z",
+    "tenantId": "tenant-demo",
+    "serviceKey": null,
+    "targetAvailabilityPct": 99.9,
+    "windowKind": "gregorian-month",
+    "minChargeableOutageSec": 0,
+    "penalty": {
+      "mode": "tiers",
+      "tiers": [
+        {
+          "belowPct": 99.9,
+          "penaltyPct": 5
+        },
+        {
+          "belowPct": 99.5,
+          "penaltyPct": 15
+        },
+        {
+          "belowPct": 99,
+          "penaltyPct": 30
+        }
+      ]
+    },
+    "monthlyFeeRials": 1000000000,
+    "penaltyCapRials": null,
+    "graceMinutes": 0,
+    "excludePlanned": true,
+    "excludeExternal": true
+  },
+  "moneyModel": null,
+  "outages": [
+    {
+      "id": "a",
+      "startSec": 0,
+      "endSec": 60,
+      "category": "chargeable"
+    },
+    {
+      "id": "b",
+      "startSec": 60,
+      "endSec": 120,
+      "category": "chargeable"
+    }
+  ],
+  "window": {
+    "startSec": 0,
+    "endSec": 2592000
+  },
+  "expect": {
+    "chargeableSec": 120,
+    "plannedSec": 0,
+    "externalSec": 0,
+    "chargeableAfterGraceSec": 120,
+    "naiveAvailabilityPct": 99.9954,
+    "contractualAvailabilityPct": 99.9954,
+    "differencePct": 0,
+    "tierPenaltyPct": null,
+    "penaltyBeforeCapRials": 0,
+    "penaltyRials": 0,
+    "targetMet": true,
+    "moneyFinalRials": null
+  }
+}

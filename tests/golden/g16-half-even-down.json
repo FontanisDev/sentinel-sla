@@ -1,0 +1,31 @@
+{
+  "id": "g16-half-even-down",
+  "title": "Banker-neutral rounding: 2.5 rounds DOWN to 2 (even)",
+  "human": "A tiny 1-second outage at 1 tx/s with a 5 IRR ticket loses 5 IRR. Attribution 50 % gives 2.5 IRR; half-to-even rounds to 2 (2 is even). One rounding, at the final step.",
+  "kind": "computeLoss",
+  "model": {
+    "version": 1,
+    "effectiveFrom": "2026-01-01T00:00:00.000Z",
+    "currency": "IRR",
+    "avgTicketRials": 5,
+    "txPerSecond": {
+      "kind": "static",
+      "tps": 40
+    },
+    "failureAttributionPct": 50,
+    "recoveryFactorPct": 0,
+    "basis": "revenue",
+    "grossMarginOrFeePct": 100
+  },
+  "input": {
+    "tps": 1,
+    "seconds": 1
+  },
+  "expect": {
+    "grossLostRials": 5,
+    "attributedRials": 2,
+    "recoveryCreditRials": 0,
+    "netRials": 2,
+    "finalRials": 2
+  }
+}

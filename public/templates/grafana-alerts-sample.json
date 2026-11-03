@@ -1,0 +1,97 @@
+{
+  "rules": [
+    {
+      "uid": "gr-sentinel-up",
+      "title": "Payment Gateway down (probe failed)",
+      "ruleGroup": "sentinel-import",
+      "for": "2m",
+      "condition": "A",
+      "labels": { "severity": "critical", "service": "payment-gateway" },
+      "annotations": {
+        "summary": "Blackbox probe reports the payment gateway target down"
+      },
+      "data": [
+        {
+          "refId": "A",
+          "relativeTimeRange": { "from": 600, "to": 0 },
+          "datasourceUid": "prometheus",
+          "model": {
+            "datasource": { "type": "prometheus", "uid": "prometheus" },
+            "expr": "up{job=\"blackbox-payment\"} == 0",
+            "instant": true,
+            "refId": "A"
+          }
+        }
+      ]
+    },
+    {
+      "uid": "gr-sentinel-err",
+      "title": "Wallet API server error ratio",
+      "ruleGroup": "sentinel-import",
+      "for": "5m",
+      "condition": "A",
+      "labels": { "severity": "warning", "service": "wallet" },
+      "annotations": {
+        "summary": "5xx share of wallet API requests above 2 percent"
+      },
+      "data": [
+        {
+          "refId": "A",
+          "relativeTimeRange": { "from": 600, "to": 0 },
+          "datasourceUid": "prometheus",
+          "model": {
+            "datasource": { "type": "prometheus", "uid": "prometheus" },
+            "expr": "sum(rate(http_requests_total{service=\"wallet\",status=~\"5..\"}[5m])) / sum(rate(http_requests_total{service=\"wallet\"}[5m])) > 0.02",
+            "instant": false,
+            "refId": "A"
+          }
+        }
+      ]
+    },
+    {
+      "uid": "gr-sentinel-lat",
+      "title": "Core Banking p95 latency above one second",
+      "ruleGroup": "sentinel-import",
+      "for": "90s",
+      "condition": "A",
+      "labels": { "severity": "critical", "team": "banking" },
+      "annotations": {
+        "summary": "p95 request duration above 1 s for 90 s"
+      },
+      "data": [
+        {
+          "refId": "A",
+          "relativeTimeRange": { "from": 600, "to": 0 },
+          "datasourceUid": "prometheus",
+          "model": {
+            "datasource": { "type": "prometheus", "uid": "prometheus" },
+            "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{service=\"core-banking\"}[5m])) by (le)) > 1",
+            "instant": false,
+            "refId": "A"
+          }
+        }
+      ]
+    },
+    {
+      "uid": "gr-sentinel-tps",
+      "title": "KYC traffic floor breached",
+      "ruleGroup": "sentinel-import",
+      "condition": "A",
+      "for": "10m",
+      "labels": { "severity": "page" },
+      "data": [
+        {
+          "refId": "A",
+          "relativeTimeRange": { "from": 600, "to": 0 },
+          "datasourceUid": "prometheus",
+          "model": {
+            "datasource": { "type": "prometheus", "uid": "prometheus" },
+            "expr": "sum(rate(kyc_requests_total[5m])) < 1",
+            "instant": false,
+            "refId": "A"
+          }
+        }
+      ]
+    }
+  ]
+}

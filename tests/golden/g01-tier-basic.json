@@ -1,0 +1,77 @@
+{
+  "id": "g01-tier-basic",
+  "title": "One chargeable hour breaches 99.9 % → 5 % tier of the monthly fee",
+  "human": "A service promised 99.9 % uptime is down for exactly 1 hour inside a 30-day month. Availability = 1 − 3600/2 592 000 = 99.8611 %, below the 99.9 % promise, so the 5 % tier applies: 5 % of the 1 000 000 000 IRR monthly fee = 50 000 000 IRR. No exclusions or grace apply.",
+  "kind": "evaluate",
+  "contract": {
+    "version": 1,
+    "effectiveFrom": "2026-01-01T00:00:00.000Z",
+    "tenantId": "tenant-demo",
+    "serviceKey": null,
+    "targetAvailabilityPct": 99.9,
+    "windowKind": "gregorian-month",
+    "minChargeableOutageSec": 0,
+    "penalty": {
+      "mode": "tiers",
+      "tiers": [
+        {
+          "belowPct": 99.9,
+          "penaltyPct": 5
+        },
+        {
+          "belowPct": 99.5,
+          "penaltyPct": 15
+        },
+        {
+          "belowPct": 99,
+          "penaltyPct": 30
+        }
+      ]
+    },
+    "monthlyFeeRials": 1000000000,
+    "penaltyCapRials": null,
+    "graceMinutes": 0,
+    "excludePlanned": true,
+    "excludeExternal": true
+  },
+  "moneyModel": {
+    "version": 1,
+    "effectiveFrom": "2026-01-01T00:00:00.000Z",
+    "currency": "IRR",
+    "avgTicketRials": 2500000,
+    "txPerSecond": {
+      "kind": "static",
+      "tps": 40
+    },
+    "failureAttributionPct": 100,
+    "recoveryFactorPct": 0,
+    "basis": "revenue",
+    "grossMarginOrFeePct": 100
+  },
+  "outages": [
+    {
+      "id": "i1",
+      "startSec": 0,
+      "endSec": 3600,
+      "category": "chargeable"
+    }
+  ],
+  "window": {
+    "startSec": 0,
+    "endSec": 2592000
+  },
+  "expect": {
+    "chargeableSec": 3600,
+    "plannedSec": 0,
+    "externalSec": 0,
+    "chargeableAfterGraceSec": 3600,
+    "naiveAvailabilityPct": 99.8611,
+    "contractualAvailabilityPct": 99.8611,
+    "differencePct": 0,
+    "tierPenaltyPct": 5,
+    "penaltyBeforeCapRials": 50000000,
+    "penaltyRials": 50000000,
+    "targetMet": false,
+    "moneyFinalRials": 360000000000
+  }
+}

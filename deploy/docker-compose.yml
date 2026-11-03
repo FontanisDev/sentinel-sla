@@ -1,0 +1,161 @@
+# ═══════════════════════════════════════════════════════════════════════════
+# Sentinel-SLA (سنتیل-SLA) — Industrial monitoring stack (Docker Compose)
+# Owner: Sentinel-SLA SRE — see deploy/README.md for the operator runbook.
+#
+# Official images only, pinned by tag. We do NOT rewrite these tools; we
+# wire them together:
+#   prometheus        — metrics collection + alert rule evaluation
+#   grafana           — dashboards (technical language) + Explore for Loki
+#   loki + promtail   — log aggregation / shipping
+#   alertmanager      — alert routing: Telegram (tech) + webhook (executive)
+#   blackbox-exporter — HTTP probing of the 6 fintech services
+#   sentinel-exporter — CUSTOM Go exporter: business + financial metrics
+#
+# Bring up:     docker compose up -d && docker compose logs -f
+# Tear down:    docker compose down (volumes keep data)
+# ═══════════════════════════════════════════════════════════════════════════
+
+services:
+
+  # ── Prometheus: scrapes all exporters, evaluates sentinel-alerts.yml ──────
+  prometheus:
+    image: prom/prometheus:v2.53.1
+    container_name: sentinel-prometheus
+    restart: unless-stopped
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=15d"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro,z
+      - ./prometheus/rules:/etc/prometheus/rules:ro,z
+      - prometheus-data:/prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - sentinel-net
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  # ── Grafana: provisioned datasources + Sentinel fleet overview dashboard ──
+  grafana:
+    image: grafana/grafana:11.1.0
+    container_name: sentinel-grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-sentinel-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro,z
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "3001:3000" # host 3001 → container 3000 (3000 reserved for the app)
+    depends_on:
+      - prometheus
+    networks:
+      - sentinel-net
+
+  # ── Loki: single-node log store (TSDB index + filesystem, no S3 needed) ──
+  loki:
+    image: grafana/loki:3.1.0
+    container_name: sentinel-loki
+    restart: unless-stopped
+    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - ./loki/loki-config.yml:/etc/loki/local-config.yaml:ro,z
+      - loki-data:/loki
+    ports:
+      - "3100:3100"
+    networks:
+      - sentinel-net
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3100/ready"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  # ── Promtail: ships container logs + /var/log into Loki ───────────────────
+  promtail:
+    image: grafana/promtail:3.1.0
+    container_name: sentinel-promtail
+    restart: unless-stopped
+    volumes:
+      - ./promtail/promtail-config.yml:/etc/promtail/config.yml:ro,z
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/log:/var/log:ro
+    security_opt:
+      - label=disable # Fedora SELinux: allow reading docker.sock and /var/log
+    depends_on:
+      - loki
+    networks:
+      - sentinel-net
+
+  # ── Alertmanager: Telegram for on-call + webhook → executive translation ──
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    container_name: sentinel-alertmanager
+    restart: unless-stopped
+    volumes:
+      - ./alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro,z
+    ports:
+      - "9093:9093"
+    networks:
+      - sentinel-net
+
+  # ── Blackbox Exporter: HTTP probes of the 6 fintech service endpoints ────
+  blackbox-exporter:
+    image: prom/blackbox-exporter:v0.25.0
+    container_name: sentinel-blackbox
+    restart: unless-stopped
+    volumes:
+      - ./blackbox/blackbox.yml:/etc/blackbox_exporter/config.yml:ro,z
+    ports:
+      - "9115:9115"
+    networks:
+      - sentinel-net
+
+  # ── Sentinel Business Exporter (CUSTOM Go code — the money bridge) ────────
+  # Scrapes the Sentinel-SLA dashboard API and exposes Prometheus metrics for
+  # lost transactions, revenue loss and SLA penalties in Tomans. Also receives
+  # Alertmanager webhooks on /webhook/executive-alert and translates them into
+  # executive language before they reach the CEO.
+  sentinel-exporter:
+    build:
+      context: ../exporter
+    container_name: sentinel-exporter
+    restart: unless-stopped
+    environment:
+      SENTINEL_API_BASE: http://host.docker.internal:3000
+      # v2.0.0: /api/dashboard requires a Bearer API token. Mint one in the
+      # app root (`bun scripts/mint-loadtest-token.mjs --name exporter`) and
+      # put it in deploy/.env as SENTINEL_API_TOKEN=stlt_... — without it the
+      # exporter logs "dashboard fetch failed: ... HTTP 401" and emits no
+      # sentinel_* metrics. The value never leaves this container.
+      SENTINEL_API_TOKEN: ${SENTINEL_API_TOKEN:-}
+    ports:
+      - "9108:9108"
+    depends_on:
+      - prometheus
+    extra_hosts:
+      - "host.docker.internal:host-gateway" # Linux: reach the Next.js app on the host
+    networks:
+      - sentinel-net
+
+# ── Networking: one bridge network for the whole observability stack ────────
+networks:
+  sentinel-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.30.250.0/24 # fixed range so the Fedora firewall rule can name it
+
+# ── Persistent state: TSDB blocks, Grafana sqlite, Loki chunks/index ───────
+volumes:
+  prometheus-data:
+  grafana-data:
+  loki-data:

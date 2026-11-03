@@ -1,0 +1,18 @@
+# ═══════════════════════════════════════════════════════════════════════════
+# Sentinel-SLA — Grafana datasource provisioning: Loki
+# Owner: Sentinel-SLA SRE
+# Fixed uid `loki` is referenced by the dashboard's logs panel.
+# ═══════════════════════════════════════════════════════════════════════════
+
+apiVersion: 1
+
+datasources:
+  - name: Loki
+    uid: loki
+    type: loki
+    access: proxy
+    url: http://loki:3100
+    isDefault: false
+    editable: false
+    jsonData:
+      maxLines: 1000

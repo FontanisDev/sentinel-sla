@@ -1,0 +1,53 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://sentinel.example.ir/schemas/incident-event.schema.json",
+  "title": "Sentinel-SLA incident event envelope",
+  "description": "Wire format for a single Sentinel-SLA incident event as emitted by the alerting pipeline (and consumed by the event collector / executive translator). It carries BOTH languages of the product: the technical identification (service, severity, timestamps) and the executive payload (financial_impact_tomans, lost_transactions). Owner: Sentinel-SLA.",
+  "type": "object",
+  "required": ["event_id", "timestamp", "service", "severity"],
+  "properties": {
+    "event_id": {
+      "type": "string",
+      "description": "Unique event identifier — a UUID (format: uuid; draft-07 validators treat format as annotation-only, so generate v4 UUIDs upstream).",
+      "minLength": 1
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "RFC 3339 / ISO-8601 timestamp of when the event was raised."
+    },
+    "service": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Service key (stable identifier) the event refers to, e.g. 'ps-gateway'."
+    },
+    "severity": {
+      "type": "string",
+      "enum": ["critical", "warning", "info"],
+      "description": "Alert severity level."
+    },
+    "incident_id": {
+      "type": "string",
+      "description": "Identifier of the associated Sentinel incident, when known."
+    },
+    "audience": {
+      "type": "string",
+      "enum": ["technical", "executive"],
+      "description": "Which language the message field is written in: metrics for engineers, Tomans for the CEO."
+    },
+    "financial_impact_tomans": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Revenue + penalty exposure attributed to the incident, in Tomans (تومان). Executive payload."
+    },
+    "lost_transactions": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Number of customer transactions lost during the incident. Executive payload."
+    },
+    "message": {
+      "type": "string",
+      "description": "Human-readable summary — English for technical audience, Persian (فارسی) acceptable for executive audience."
+    }
+  }
+}

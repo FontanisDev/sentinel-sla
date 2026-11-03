@@ -1,0 +1,34 @@
+[
+  {
+    "triggerid": "15101",
+    "description": "Payment gateway agent unreachable",
+    "expression": "last(/payment-gateway/agent.ping)=0",
+    "priority": "4",
+    "status": "0",
+    "hosts": [{ "host": "payment-gateway", "name": "Payment Gateway endpoint" }]
+  },
+  {
+    "triggerid": "15102",
+    "description": "Payment gateway TCP service responds slower than 1s",
+    "expression": "last(/payment-gateway/net.tcp.service.perf[tcp,,8443])>1",
+    "priority": "4",
+    "status": "0",
+    "hosts": [{ "host": "payment-gateway", "name": "Payment Gateway endpoint" }]
+  },
+  {
+    "triggerid": "15103",
+    "description": "Wallet checkout web scenario has failing steps",
+    "expression": "last(/wallet/web.test.fail[wallet-checkout])>0",
+    "priority": "3",
+    "status": "0",
+    "hosts": [{ "host": "wallet", "name": "Wallet service host" }]
+  },
+  {
+    "triggerid": "15104",
+    "description": "Core banking transaction rate below floor",
+    "expression": "{core-banking:txn_requests_per_sec.avg(60)}<10",
+    "priority": "5",
+    "status": "0",
+    "hosts": [{ "host": "core-banking", "name": "Core Banking host" }]
+  }
+]

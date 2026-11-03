@@ -1,0 +1,75 @@
+# Sentinel-SLA — the application container(s), SQLite on a named volume.
+#
+#   docker compose up -d --build          → demo mode on http://localhost:3000
+#   curl http://localhost:3000/api/health/ready
+#   open http://localhost:3000/setup      → create the owner account
+#
+# Services: migrate (one-shot schema sync), app (web + loops in demo mode) and an
+# optional worker (profile "live") for live mode.
+# The Prometheus/Grafana/Loki/Alertmanager/exporter stack is separate:
+#   docker compose -f deploy/docker-compose.yml up -d   (see docs/DEVELOPMENT.md)
+
+services:
+  # One-shot: create/upgrade the SQLite schema on the shared /data volume.
+  migrate:
+    image: sentinel-sla/app:2.0.0
+    build: .
+    user: "1001:1001"
+    command: ["bun", "x", "prisma", "db", "push", "--skip-generate", "--schema", "prisma/schema.prisma"]
+    environment:
+      DATABASE_URL: file:/data/sentinel.db
+    volumes:
+      - app-data:/data
+    restart: "no"
+
+  app:
+    image: sentinel-sla/app:2.0.0
+    build: .
+    restart: unless-stopped
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      DATABASE_URL: file:/data/sentinel.db
+      SENTINEL_MODE: ${SENTINEL_MODE:-demo}
+      SENTINEL_ROLE: ${SENTINEL_APP_ROLE:-all}
+      SENTINEL_DATA_DIR: /data
+      SENTINEL_PUBLIC_BASE_URL: ${SENTINEL_PUBLIC_BASE_URL:-http://localhost:3000}
+      PORT: 3000
+    volumes:
+      - app-data:/data
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+
+  # Live mode only: run the worker in its own container and start the app with
+  #   SENTINEL_MODE=live SENTINEL_APP_ROLE=web
+  #   docker compose --profile live up -d
+  worker:
+    profiles: ["live"]
+    image: sentinel-sla/app:2.0.0
+    build: .
+    restart: unless-stopped
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    command: ["bun", "src/worker/index.ts"]
+    environment:
+      DATABASE_URL: file:/data/sentinel.db
+      SENTINEL_MODE: ${SENTINEL_MODE:-live}
+      SENTINEL_ROLE: worker
+      SENTINEL_DATA_DIR: /data
+    volumes:
+      - app-data:/data
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  app-data:

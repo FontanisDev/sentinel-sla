@@ -1,0 +1,354 @@
+{
+  "id": "iranian-fintech-synthetic",
+  "synthetic": true,
+  "syntheticNotice": "SYNTHETIC — written by the Sentinel-SLA project from its money model (spec §7.2 item 5). No real provider data: shape (peak 20:00-23:00, Thu-Fri weekend, Yalda, Nowruz, salary days) is directionally modelled on public knowledge of Iranian fintech rhythms; every number is invented and must never be used as market data. Never use as money input — validation scenarios only.",
+  "title": "Iranian-fintech synthetic traffic profile and outage valuations",
+  "moneyModel": {
+    "version": 1,
+    "effectiveFrom": "2026-01-01T00:00:00.000Z",
+    "currency": "IRR",
+    "avgTicketRials": 850000,
+    "txPerSecond": {
+      "kind": "hourOfWeekProfile",
+      "tzOffsetMinutes": 210,
+      "profile": [
+        90,
+        90,
+        90,
+        90,
+        90,
+        90,
+        90,
+        110,
+        110,
+        110,
+        150,
+        150,
+        150,
+        150,
+        150,
+        150,
+        150,
+        250,
+        250,
+        250,
+        420,
+        420,
+        420,
+        100,
+        90,
+        90,
+        90,
+        90,
+        90,
+        90,
+        90,
+        110,
+        110,
+        110,
+        150,
+        150,
+        150,
+        150,
+        150,
+        150,
+        150,
+        250,
+        250,
+        250,
+        420,
+        420,
+        420,
+        100,
+        90,
+        90,
+        90,
+        90,
+        90,
+        90,
+        90,
+        110,
+        110,
+        110,
+        150,
+        150,
+        150,
+        150,
+        150,
+        150,
+        150,
+        250,
+        250,
+        250,
+        420,
+        420,
+        420,
+        100,
+        90,
+        90,
+        90,
+        90,
+        90,
+        90,
+        90,
+        110,
+        110,
+        110,
+        150,
+        150,
+        150,
+        150,
+        150,
+        150,
+        150,
+        250,
+        250,
+        250,
+        420,
+        420,
+        420,
+        100,
+        90,
+        90,
+        90,
+        90,
+        90,
+        90,
+        90,
+        110,
+        110,
+        110,
+        130,
+        130,
+        130,
+        130,
+        60,
+        60,
+        60,
+        60,
+        60,
+        60,
+        40,
+        40,
+        40,
+        40,
+        35,
+        35,
+        35,
+        35,
+        35,
+        35,
+        35,
+        35,
+        35,
+        35,
+        35,
+        35,
+        35,
+        35,
+        35,
+        35,
+        35,
+        35,
+        35,
+        35,
+        60,
+        60,
+        60,
+        35,
+        90,
+        90,
+        90,
+        90,
+        90,
+        90,
+        90,
+        110,
+        110,
+        110,
+        150,
+        150,
+        150,
+        150,
+        150,
+        150,
+        150,
+        250,
+        250,
+        250,
+        420,
+        420,
+        420,
+        100
+      ]
+    },
+    "failureAttributionPct": 100,
+    "recoveryFactorPct": 0,
+    "basis": "revenue",
+    "grossMarginOrFeePct": 100
+  },
+  "profileRules": {
+    "note": "Bucket index = day-of-week × 24 + Tehran hour; Sunday = 0 (money-model convention).",
+    "weekday": [
+      {
+        "fromHour": 0,
+        "toHour": 7,
+        "tps": 90
+      },
+      {
+        "fromHour": 7,
+        "toHour": 10,
+        "tps": 110
+      },
+      {
+        "fromHour": 10,
+        "toHour": 17,
+        "tps": 150
+      },
+      {
+        "fromHour": 17,
+        "toHour": 20,
+        "tps": 250
+      },
+      {
+        "fromHour": 20,
+        "toHour": 23,
+        "tps": 420
+      },
+      {
+        "fromHour": 23,
+        "toHour": 24,
+        "tps": 100
+      }
+    ],
+    "thursday": [
+      {
+        "fromHour": 0,
+        "toHour": 7,
+        "tps": 90
+      },
+      {
+        "fromHour": 7,
+        "toHour": 10,
+        "tps": 110
+      },
+      {
+        "fromHour": 10,
+        "toHour": 14,
+        "tps": 130
+      },
+      {
+        "fromHour": 14,
+        "toHour": 17,
+        "tps": 60
+      },
+      {
+        "fromHour": 17,
+        "toHour": 20,
+        "tps": 60
+      },
+      {
+        "fromHour": 20,
+        "toHour": 23,
+        "tps": 40
+      },
+      {
+        "fromHour": 23,
+        "toHour": 24,
+        "tps": 40
+      }
+    ],
+    "friday": [
+      {
+        "fromHour": 0,
+        "toHour": 20,
+        "tps": 35
+      },
+      {
+        "fromHour": 20,
+        "toHour": 23,
+        "tps": 60
+      },
+      {
+        "fromHour": 23,
+        "toHour": 24,
+        "tps": 35
+      }
+    ]
+  },
+  "calendarEvents": {
+    "yalda": {
+      "label": "Yalda night (winter-solstice eve) — late-night shopping spike",
+      "windowStartTehran": "2026-12-21T18:00:00",
+      "windowEndTehran": "2026-12-22T06:00:00",
+      "scale": 1.8
+    },
+    "nowruz": {
+      "label": "Nowruz week (Farvardin 1-7) — holiday trough",
+      "windowStartTehran": "2026-03-20T00:00:00",
+      "windowEndTehran": "2026-03-28T00:00:00",
+      "scale": 0.25
+    },
+    "salaryDays": {
+      "label": "Month-end salary day — representative 1404/1405 pay-day evenings (explicit Gregorian samples; not a full Jalali calendar)",
+      "daysTehran": [
+        "2026-01-21",
+        "2026-02-19",
+        "2026-03-19",
+        "2026-04-20",
+        "2026-05-20"
+      ],
+      "dailyStartHourTehran": 17,
+      "dailyEndHourTehran": 24,
+      "scale": 1.35
+    }
+  },
+  "resolverConvention": "Like the golden runner: the tps is taken at the outage START bucket (Tehran local), then the matching calendar-event scale (if any) applies.",
+  "lossCases": [
+    {
+      "id": "weekday-peak",
+      "title": "Ordinary Sunday-evening peak outage (20:15, 90 min)",
+      "human": "Bucket Sunday 20-23 = 420 tx/s. 5400 s × 420 × 850 000 IRR = 1 927 800 000 000 IRR gross; attribution 100 %, recovery 0 %, margin 100 % → final equals gross.",
+      "startUtc": "2026-01-04T16:45:00Z",
+      "seconds": 5400,
+      "eventScale": null,
+      "expectFinalRials": 1927800000000
+    },
+    {
+      "id": "yalda-night",
+      "title": "Yalda-night outage (22:00, 6 h) at ×1.8 spike",
+      "human": "Bucket Monday 20-23 = 420 × 1.8 = 756 tx/s. 21600 s × 756 × 850 000 IRR = 13 880 160 000 000 IRR.",
+      "startUtc": "2026-12-21T18:30:00Z",
+      "seconds": 21600,
+      "eventScale": 1.8,
+      "expectFinalRials": 13880160000000
+    },
+    {
+      "id": "nowruz-trough",
+      "title": "Nowruz-week outage (11:00, 1 h) at ×0.25 trough",
+      "human": "Bucket Monday 10-17 = 150 × 0.25 = 37.5 tx/s. 3600 s × 37.5 × 850 000 IRR = 114 750 000 000 IRR.",
+      "startUtc": "2026-03-23T07:30:00Z",
+      "seconds": 3600,
+      "eventScale": 0.25,
+      "expectFinalRials": 114750000000
+    },
+    {
+      "id": "salary-day-thursday",
+      "title": "Salary-day outage on a Thursday evening (19:30, 1 h) at ×1.35",
+      "human": "Bucket Thursday 17-20 = 60 × 1.35 = 81 tx/s. 3600 s × 81 × 850 000 IRR = 247 860 000 000 IRR.",
+      "startUtc": "2026-03-19T16:00:00Z",
+      "seconds": 3600,
+      "eventScale": 1.35,
+      "expectFinalRials": 247860000000
+    },
+    {
+      "id": "friday-weekend",
+      "title": "Friday-weekend outage (14:00, 1 h)",
+      "human": "Bucket Friday 00-20 = 35 tx/s. 3600 s × 35 × 850 000 IRR = 107 100 000 000 IRR.",
+      "startUtc": "2026-01-09T10:30:00Z",
+      "seconds": 3600,
+      "eventScale": null,
+      "expectFinalRials": 107100000000
+    }
+  ]
+}

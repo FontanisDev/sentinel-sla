@@ -1,0 +1,11 @@
+{
+  "id": "g13-warning-weight",
+  "title": "Warning severity bills 30 % of the fixed + per-minute penalty",
+  "human": "A degraded (warning-severity) incident of 10 minutes under a base 0 + 1 000 000 IRR/min scheme would be 10 000 000 IRR when critical; warnings bill 30 %: 3 000 000 IRR. (The engine passes the 30 % weight per incident; the domain function applies one half-even rounding.)",
+  "kind": "penaltyFixedPerMinute",
+  "baseRials": 0,
+  "perMinuteRials": 1000000,
+  "seconds": 600,
+  "weightPct": 30,
+  "expect": 3000000
+}

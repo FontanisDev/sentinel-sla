@@ -1,0 +1,31 @@
+{
+  "id": "g17-half-even-up",
+  "title": "Banker-neutral rounding: 7.5 rounds UP to 8 (even)",
+  "human": "Same tiny outage with a 15 IRR ticket: 50 % attribution gives 7.5 IRR; half-to-even rounds to 8 (8 is even). The even rule keeps long sums unbiased.",
+  "kind": "computeLoss",
+  "model": {
+    "version": 1,
+    "effectiveFrom": "2026-01-01T00:00:00.000Z",
+    "currency": "IRR",
+    "avgTicketRials": 15,
+    "txPerSecond": {
+      "kind": "static",
+      "tps": 40
+    },
+    "failureAttributionPct": 50,
+    "recoveryFactorPct": 0,
+    "basis": "revenue",
+    "grossMarginOrFeePct": 100
+  },
+  "input": {
+    "tps": 1,
+    "seconds": 1
+  },
+  "expect": {
+    "grossLostRials": 15,
+    "attributedRials": 8,
+    "recoveryCreditRials": 0,
+    "netRials": 8,
+    "finalRials": 8
+  }
+}

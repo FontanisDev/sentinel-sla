@@ -1,0 +1,14 @@
+node_modules
+.next
+.git
+.github
+db/*.db
+db/*.db-journal
+data
+docs
+tests/e2e
+test-results
+playwright-report
+*.log
+.env
+scripts

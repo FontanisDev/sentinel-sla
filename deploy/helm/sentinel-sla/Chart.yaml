@@ -1,0 +1,41 @@
+# ═══════════════════════════════════════════════════════════════════════════
+# Sentinel-SLA — Helm chart definition
+# Owner: Sentinel-SLA SRE
+#
+# Deploys the Sentinel-SLA application (Next.js dashboard + SLA engine)
+# together with a custom Go exporter sidecar that exposes business metrics
+# (lost transactions, revenue loss, SLA penalties in Tomans) to a
+# Prometheus Operator via ServiceMonitor.
+#
+# The app is configured EXCLUSIVELY through environment variables validated
+# by src/server/config.ts (zod, fail-fast). This chart therefore wires env
+# vars only — there is no application.yml and never was one the app read.
+# ═══════════════════════════════════════════════════════════════════════════
+
+apiVersion: v2
+name: sentinel-sla
+description: >-
+  Sentinel-SLA — SLA monitoring for Iranian fintech. Speaks two
+  languages: technical (Prometheus/Grafana metrics for engineers) and
+  executive (financial impact in Tomans: lost transactions, SLA penalties).
+  Self-validates detection speed (MTTD/MTTR) through chaos engineering and
+  produces executive PDF SLA reports. This chart ships the app plus its
+  custom business-metrics exporter sidecar.
+type: application
+keywords:
+  - monitoring
+  - sla
+  - fintech
+  - prometheus
+  - grafana
+  - financial-impact
+home: https://sentinel.example.ir
+maintainers:
+  - name: Sentinel-SLA SRE
+    email: sre@sentinel.example.ir
+
+# Chart version (bump on any chart change)
+version: 0.2.0
+
+# Version of the Sentinel-SLA app being deployed
+appVersion: "2.0.0"

@@ -1,0 +1,20 @@
+# ═══════════════════════════════════════════════════════════════════════════
+# Sentinel-SLA — Grafana dashboard provider provisioning
+# Owner: Sentinel-SLA SRE
+# Loads every JSON dashboard from the mounted provisioning folder — currently
+# sentinel-overview.json (technical view; financial panels included).
+# ═══════════════════════════════════════════════════════════════════════════
+
+apiVersion: 1
+
+providers:
+  - name: sentinel-sla
+    orgId: 1
+    folder: "" # keep at top level — operators land on it immediately
+    folderUid: ""
+    type: file
+    disableDeletion: true # provisioned dashboards are code, not hand-edits
+    updateIntervalSeconds: 30
+    allowUiUpdates: false
+    options:
+      path: /etc/grafana/provisioning/dashboards

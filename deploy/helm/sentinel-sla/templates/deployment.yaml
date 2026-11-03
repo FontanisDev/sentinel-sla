@@ -1,0 +1,212 @@
+{{- /*
+═══════════════════════════════════════════════════════════════════════════
+Sentinel-SLA — Deployment (app + custom exporter sidecar)
+Owner: Sentinel-SLA SRE
+
+Two containers per pod:
+  1. app       — the Next.js Sentinel dashboard + SLA engine (:3000)
+  2. exporter  — custom Go business-metrics exporter (:9108) that translates
+                 the dashboard API into financial Prometheus metrics.
+
+Probes hit the PUBLIC health endpoints (/api/health/live, /api/health/ready)
+— NOT /api/dashboard, which sits behind authentication and would fail an
+unauthenticated kubelet probe by design.
+
+OWASP ASVS L1 flavour: non-root, no privilege escalation, all capabilities
+dropped, seccomp RuntimeDefault.
+═══════════════════════════════════════════════════════════════════════════
+*/}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-{{ .Chart.Name }}
+  labels:
+    app.kubernetes.io/name: {{ .Chart.Name }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  strategy:
+    type: Recreate # single engine instance; RWO volume cannot be shared
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ .Chart.Name }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ .Chart.Name }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        runAsNonRoot: true # OWASP: no root containers
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001 # persistence volume must be writable by the app
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        # ── The Sentinel app (dashboard + engine) ──────────────────────────
+        - name: app
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.targetPort }}
+              protocol: TCP
+          env:
+            - name: NODE_ENV
+              value: production
+            - name: SENTINEL_MODE
+              value: {{ .Values.sentinel.mode | quote }}
+            # /data is the persistence volume (SQLite DB + archived reports);
+            # the app would otherwise fall back to <cwd>/data inside the
+            # container filesystem and lose everything on reschedule.
+            - name: SENTINEL_DATA_DIR
+              value: /data
+            - name: SENTINEL_ROLE
+              value: {{ .Values.sentinel.role | quote }}
+            # NOTE: in live mode the Prometheus connection (URL + auth) is
+            # admin-managed in the database (IntegrationSetting — the same row
+            # the setup wizard and install.sh write); it is intentionally NOT
+            # an env var. Configure it post-install in Settings → Integrations.
+            - name: SENTINEL_POLL_INTERVAL_SEC
+              value: {{ .Values.sentinel.live.pollIntervalSec | quote }}
+            {{- if .Values.sentinel.publicBaseUrl }}
+            - name: SENTINEL_PUBLIC_BASE_URL
+              value: {{ .Values.sentinel.publicBaseUrl | quote }}
+            {{- end }}
+            {{- if .Values.sentinel.ackSecret }}
+            - name: SENTINEL_ACK_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ default (printf "%s-%s" .Release.Name "notify") .Values.notify.existingSecret }}
+                  key: ackSecret
+            {{- end }}
+            # Database: existingSecret wins over the plaintext url (git-safe).
+            - name: DATABASE_URL
+              {{- if .Values.database.existingSecret }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.database.existingSecret }}
+                  key: DATABASE_URL
+              {{- else }}
+              value: {{ .Values.database.url | quote }}
+              {{- end }}
+            {{- if or .Values.notify.telegramBotToken .Values.notify.baleBotToken .Values.notify.existingSecret .Values.sentinel.ackSecret }}
+            - name: SENTINEL_TELEGRAM_BOT_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ default (printf "%s-%s" .Release.Name "notify") .Values.notify.existingSecret }}
+                  key: telegramBotToken
+                  optional: true
+            - name: SENTINEL_BALE_BOT_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ default (printf "%s-%s" .Release.Name "notify") .Values.notify.existingSecret }}
+                  key: baleBotToken
+                  optional: true
+            {{- end }}
+            {{- range $key, $value := .Values.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          livenessProbe:
+            httpGet:
+              path: /api/health/live
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /api/health/ready
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          securityContext:
+            allowPrivilegeEscalation: false # OWASP: never escalate
+            capabilities:
+              drop: ["ALL"]
+            readOnlyRootFilesystem: false # Next.js writes .next/cache at runtime
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+        # ── Custom Go exporter sidecar (the money bridge) ─────────────────
+        {{- if .Values.exporter.enabled }}
+        - name: exporter
+          image: "{{ .Values.exporter.image.repository }}:{{ .Values.exporter.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args:
+            - "--listen={{ .Values.exporter.listen }}"
+            - "--api={{ .Values.exporter.apiBase }}"
+          ports:
+            - name: metrics
+              containerPort: 9108
+              protocol: TCP
+          env:
+            - name: SENTINEL_API_BASE
+              value: {{ .Values.exporter.apiBase | quote }}
+          livenessProbe:
+            httpGet:
+              path: /metrics
+              port: metrics
+            initialDelaySeconds: 10
+            periodSeconds: 15
+            timeoutSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /metrics
+              port: metrics
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+            readOnlyRootFilesystem: true # distroless/static binary — nothing to write
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+        {{- end }}
+      volumes:
+        - name: data
+          {{- if .Values.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ default (printf "%s-%s" .Release.Name "data") .Values.persistence.existingClaim }}
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

@@ -1,0 +1,52 @@
+{
+  "id": "g02-fixed-per-minute",
+  "title": "Fixed + per-minute penalty: 10 minutes bills base + 10 × per-minute",
+  "human": "A contract without tiers charges 50 000 000 IRR base plus 7 500 000 IRR per charged minute. A 10-minute outage bills 50 000 000 + 10 × 7 500 000 = 125 000 000 IRR.",
+  "kind": "evaluate",
+  "contract": {
+    "version": 1,
+    "effectiveFrom": "2026-01-01T00:00:00.000Z",
+    "tenantId": "tenant-demo",
+    "serviceKey": null,
+    "targetAvailabilityPct": 99.9,
+    "windowKind": "gregorian-month",
+    "minChargeableOutageSec": 0,
+    "penalty": {
+      "mode": "fixedPerMinute",
+      "baseRials": 50000000,
+      "perMinuteRials": 7500000
+    },
+    "monthlyFeeRials": 1000000000,
+    "penaltyCapRials": null,
+    "graceMinutes": 0,
+    "excludePlanned": true,
+    "excludeExternal": true
+  },
+  "moneyModel": null,
+  "outages": [
+    {
+      "id": "i1",
+      "startSec": 0,
+      "endSec": 600,
+      "category": "chargeable"
+    }
+  ],
+  "window": {
+    "startSec": 0,
+    "endSec": 2592000
+  },
+  "expect": {
+    "chargeableSec": 600,
+    "plannedSec": 0,
+    "externalSec": 0,
+    "chargeableAfterGraceSec": 600,
+    "naiveAvailabilityPct": 99.9769,
+    "contractualAvailabilityPct": 99.9769,
+    "differencePct": 0,
+    "tierPenaltyPct": null,
+    "penaltyBeforeCapRials": 125000000,
+    "penaltyRials": 125000000,
+    "targetMet": false,
+    "moneyFinalRials": null
+  }
+}

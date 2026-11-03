@@ -1,0 +1,17 @@
+# Patterns to ignore when building packages of the Sentinel-SLA Helm chart.
+# Source: `helm create` defaults (industrial convention).
+
+.git
+*.orig
+*.rej
+*.swp
+.DS_Store
+Thumbs.db
+.gitignore
+.gitattributes
+
+# GPG/SSH secrets — never ship keys inside a chart
+*.gpg
+*.key
+*.pem
+secrets/

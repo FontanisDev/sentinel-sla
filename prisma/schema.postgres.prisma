@@ -1,0 +1,511 @@
+// Sentinel-SLA — Prisma schema
+// Monitoring data model: tenants (v2 multi-tenancy), services, incidents,
+// alerts, chaos experiments, metric snapshots and generated SLA reports.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// v2 multi-tenancy: a client company owning a set of monitored services.
+model Tenant {
+  id        String    @id @default(cuid())
+  key       String    @unique
+  name      String
+  nameFa    String?
+  createdAt DateTime  @default(now())
+  services  Service[]
+}
+
+model Service {
+  id                  String            @id @default(cuid())
+  key                 String            @unique
+  name                String
+  nameFa              String?
+  tenantId            String?
+  tenant              Tenant?           @relation(fields: [tenantId], references: [id])
+  tier                String            @default("tier-1")
+  endpoint            String
+  baseLatencyMs       Float             @default(120)
+  tps                 Float             @default(50)
+  avgTransactionValue Float             @default(250000)
+  slaTarget           Float             @default(0.999)
+  penaltyBase         Float             @default(50000000)
+  penaltyPerMinute    Float             @default(7500000)
+  criticality         String            @default("critical")
+  enabled             Boolean           @default(true)
+  // ── live mode ────────────────────────────────────────────────
+  // Probe source config, JSON: { kind: "blackbox", job } | { kind: "promql",
+  // good, total } | { kind: "alertmanager", alert, matcher } |
+  // { kind: "synthetic" }.
+  // null = the service is simulation-only (Demo mode keeps working untouched).
+  probeSource         String?
+  // ── resilience ────────────────────────────────────────────────
+  // Live-mode chaos hook: a customer-provided, opt-in webhook that flips a
+  // fault (e.g. a maintenance flag) on a STAGING target. Never customer
+  // production. null = chaos cannot act on this service in live mode (the
+  // 409 names it). The secret HMAC-signs the hook payload.
+  chaosHookUrl        String?
+  chaosHookSecret     String?
+  // Rolling live state: consecutive failure/success streaks and the last
+  // observed status (up | down | degraded | stale | null = never polled).
+  // liveIncidentOpen tracks whether a live incident is currently open —
+  // independent of liveStatus so a stale episode never loses it.
+  liveFailures        Int               @default(0)
+  liveSuccesses       Int               @default(0)
+  liveStatus          String?
+  liveIncidentOpen    Boolean           @default(false)
+  lastPolledAt        DateTime?
+  // Shaparak/PSP transaction profile : JSON
+  // { buckets: number[168], tzOffsetMinutes } — the hour-of-week tps the
+  // money path resolves outages with. null = the flat `tps` column drives
+  // money (the import card on the service page says which source is live).
+  tpsProfile          String?
+  createdAt           DateTime          @default(now())
+  incidents           Incident[]
+  chaosExperiments    ChaosExperiment[]
+  metricSnapshots     MetricSnapshot[]
+  alerts              Alert[]
+  selfTestRuns        SelfTestRun[]
+}
+
+// self-test: one row per controlled experiment the product runs
+// against its own detection pipeline — a synthetic target it fully controls
+//. Weekly schedule or manual run; MTTD/MTTR are
+// stored so /resilience can prove the "detect in <60s" promise over time.
+model SelfTestRun {
+  id           String    @id @default(cuid())
+  serviceId    String
+  service      Service   @relation(fields: [serviceId], references: [id])
+  trigger      String    @default("manual") // manual | weekly
+  mode         String    @default("demo") // demo | live — how the fault was injected
+  status       String    @default("running") // running | passed | failed
+  startedAt    DateTime  @default(now())
+  finishedAt   DateTime?
+  faultUntil   DateTime? // live mode: window during which the synthetic probe reads DOWN
+  detectedAt   DateTime?
+  resolvedAt   DateTime?
+  mttdSec      Float?
+  mttrSec      Float?
+  gateSec      Int       @default(60)
+  gatePassed   Boolean?
+  incidentId   String?
+  experimentId String?
+  error        String?
+  alerted      Boolean   @default(false) // gate-miss notification emitted
+  createdAt    DateTime  @default(now())
+
+  @@index([startedAt])
+  @@index([status])
+}
+
+model Incident {
+  id                String    @id @default(cuid())
+  serviceId         String
+  service           Service   @relation(fields: [serviceId], references: [id])
+  status            String    @default("ongoing") // ongoing | resolved
+  severity          String    @default("critical") // critical | warning
+  source            String    @default("spontaneous") // spontaneous | chaos | manual
+  startedAt         DateTime // actual fault time
+  detectedAt        DateTime? // monitoring detection time (MTTD anchor)
+  resolvedAt        DateTime?
+  acknowledgedAt    DateTime? // on-call took ownership (MTTA anchor, v2.5)
+  acknowledgedBy    String? // display handle of the acknowledger
+  escalatedAt       DateTime? // paged the secondary after the policy timeout (v2.6)
+  escalatedTo       String? // who the escalation page reached (name + handle)
+  mttdSec           Float?
+  mttrSec           Float?
+  mttaSec           Float? // acknowledgedAt − detectedAt (fallback startedAt)
+  durationSec       Float?
+  lostTransactions  Int       @default(0)
+  revenueLossTomans Float     @default(0)
+  penaltyTomans     Float     @default(0)
+  aiSummary         String?
+  aiSource          String? // llm | heuristic (rule-based fallback)
+  aiGeneratedAt     DateTime?
+  // Live-mode evidence: JSON with probe samples, the detection
+  // rule/config, resolved contract & money-model versions and the computed
+  // breakdown (docs/DOMAIN.md §5). Demo incidents keep their `events` timeline.
+  evidence          String?
+  chaosExperimentId String?
+  events            String    @default("[]") // JSON timeline [{ts, event, detail}]
+  alerts            Alert[]
+  createdAt         DateTime  @default(now())
+
+  @@index([serviceId, startedAt])
+  @@index([status])
+}
+
+// Alertmanager webhook de-duplication + integration audit.
+model IntegrationEvent {
+  id          String   @id @default(cuid())
+  source      String // alertmanager | prometheus-test | ...
+  fingerprint String // provider-side dedup key (alertmanager fingerprint)
+  status      String // firing | resolved | error
+  payload     String   @default("{}") // raw JSON for audit
+  incidentId  String?
+  receivedAt  DateTime @default(now())
+
+  @@unique([source, fingerprint])
+  @@index([receivedAt])
+}
+
+// Admin-editable integration settings: prometheus.baseUrl,
+// prometheus.auth (none|basic|bearer + secret), stored JSON per key.
+model IntegrationSetting {
+  key       String   @id
+  value     String   @default("{}") // JSON
+  updatedAt DateTime @default(now())
+  updatedBy String?
+}
+
+model Alert {
+  id         String    @id @default(cuid())
+  incidentId String?
+  incident   Incident? @relation(fields: [incidentId], references: [id])
+  serviceId  String?
+  service    Service?  @relation(fields: [serviceId], references: [id])
+  channel    String    @default("telegram") // telegram | webhook | dashboard
+  audience   String    @default("technical") // technical | executive
+  severity   String    @default("critical") // critical | warning | info
+  title      String
+  message    String
+  status     String    @default("delivered") // sent | delivered | failed
+  sentAt     DateTime  @default(now())
+
+  @@index([sentAt])
+}
+
+model ChaosExperiment {
+  id                 String    @id @default(cuid())
+  serviceId          String
+  service            Service   @relation(fields: [serviceId], references: [id])
+  type               String    @default("outage") // outage | latency | error-spike
+  status             String    @default("running") // running | passed | failed | aborted
+  startedAt          DateTime  @default(now())
+  endedAt            DateTime?
+  plannedDurationSec Float     @default(45)
+  mttdSec            Float?
+  mttrSec            Float?
+  gatePassed         Boolean?
+  notes              String?
+
+  @@index([startedAt])
+}
+
+model MetricSnapshot {
+  id         String   @id @default(cuid())
+  serviceId  String
+  service    Service  @relation(fields: [serviceId], references: [id])
+  ts         DateTime @default(now())
+  status     String // up | degraded | down
+  latencyMs  Float
+  errorRate  Float
+  throughput Float
+
+  @@index([serviceId, ts])
+  @@index([ts])
+}
+
+model SlaReport {
+  id          String   @id @default(cuid())
+  periodStart DateTime
+  periodEnd   DateTime
+  generatedAt DateTime @default(now())
+  fileName    String
+  filePath    String
+  fileSize    Int      @default(0)
+  generatedBy String   @default("manual") // manual | scheduled
+  summaryJson String   @default("{}")
+  // : template kind, language and tamper-evidence. kind/language
+  // are mirrored on ReportSchedule so a schedule regenerates the same
+  // artefact; paramsJson carries the full generation parameters so the
+  // authorized regenerate endpoint can rebuild the exact report from
+  // current data. snapshotHash is the SHA-256 printed in the title block —
+  // it pins the data snapshot the numbers came from.
+  kind         String   @default("executive") // executive | statement | incident
+  language     String   @default("en") // en | fa
+  subjectId    String? // incident id (kind=incident), tenant id (kind=statement), null (fleet executive)
+  snapshotHash String   @default("") // SHA-256 of the canonical data snapshot (hex)
+  paramsJson   String   @default("{}") // JSON of the generation parameters
+
+  @@index([kind])
+}
+
+// v2.1 maintenance windows: while a window is ACTIVE, alert delivery is
+// suppressed for the covered service (serviceId null = fleet-wide), but
+// incidents are still detected/recorded/resolved — SLA truth is never altered.
+// No FK to Service on purpose: access goes through parameterized raw SQL
+// (src/server/maintenance.ts) to stay HMR-safe when `prisma db push`
+// regenerates the client under the running dev server (pattern of tenants.ts).
+model MaintenanceWindow {
+  id               String   @id @default(cuid())
+  serviceId        String? // null = fleet-wide window
+  tenantId         String? // owning tenant (resolved from the service when set)
+  reason           String
+  status           String   @default("active") // active | expired | cancelled
+  startAt          DateTime
+  endAt            DateTime
+  createdAt        DateTime @default(now())
+  createdBy        String   @default("on-call")
+  suppressedAlerts Int      @default(0)
+
+  @@index([status, endAt])
+}
+
+// v2.2 alert governance. Same no-FK + raw-SQL access pattern as
+// MaintenanceWindow (HMR safety under prisma db push).
+model AlertRule {
+  id            String    @id @default(cuid())
+  name          String
+  serviceId     String? // null = fleet rule (evaluated per service)
+  metric        String // uptime | errorRate | latencyMs | throughput
+  operator      String // lt | gt
+  threshold     Float
+  severity      String    @default("warning") // critical | warning
+  audience      String    @default("technical") // technical | executive | both
+  cooldownMin   Int       @default(15)
+  quietStartMin Int? // quiet-hours start (minutes from midnight) — warning/info defer to window end
+  quietEndMin   Int? // quiet-hours end; quietStartMin null = quiet hours disabled on this rule
+  enabled       Boolean   @default(true)
+  timesFired    Int       @default(0)
+  lastFiredAt   DateTime?
+  createdAt     DateTime  @default(now())
+
+  @@index([enabled])
+}
+
+model NotificationChannel {
+  id             String    @id @default(cuid())
+  name           String
+  kind           String // telegram | bale | webhook | email | mattermost | jira | redmine
+  target         String
+  audience       String    @default("technical")
+  enabled        Boolean   @default(true)
+  secret         String? // per-channel credential (webhook HMAC key; Jira email:token or PAT; Redmine API key) — never echoed in DTOs
+  settings       String? // non-secret per-kind JSON (jira: projectKey/issueTypeName; redmine: projectId; mattermost: channel/username) — echoed in DTOs
+  deliveredCount Int       @default(0)
+  failedCount    Int       @default(0)
+  lastDeliveryAt DateTime?
+  lastError      String? // null = last attempt succeeded / never fired
+  createdAt      DateTime  @default(now())
+
+  @@index([enabled])
+}
+
+// ═══ notification outbox (transactional outbox pattern) ═══════════
+// Every notification is FIRST persisted here (same truth as the Alert feed
+// row it belongs to), then the worker's dispatcher delivers it with retry +
+// exponential backoff. Terminal states: delivered | dead (dead-letter after
+// maxAttempts failures). No FK on purpose — raw-SQL access pattern of the
+// other governance tables (HMR-safe under prisma db push).
+model NotificationOutbox {
+  id            String    @id @default(cuid())
+  createdAt     DateTime  @default(now())
+  availableAt   DateTime  @default(now()) // earliest next attempt (backoff / quiet-hours defer)
+  kind          String // telegram | bale | webhook | email | simulate (adapter snapshot)
+  channelId     String? // NotificationChannel row this fan-out matched
+  target        String? // target snapshot — delivery survives channel deletion
+  audience      String    @default("technical") // technical | executive
+  severity      String    @default("info") // critical | warning | info
+  topic         String // detection | recovery | escalation | rule | test | digest
+  title         String
+  body          String
+  incidentId    String?
+  serviceName   String? // snapshot for grouped messages + the delivery log UI
+  alertId       String? // Alert feed row whose delivery status this row owns
+  ackUrl        String? // signed acknowledgement link carried in structured payloads
+  dedupKey      String? // an undelivered row with the same key suppresses a duplicate
+  groupKey      String? // dispatcher merges same-group due rows into one message
+  status        String    @default("pending") // pending | delivering | delivered | dead
+  attempts      Int       @default(0)
+  maxAttempts   Int       @default(5)
+  test          Boolean   @default(false)
+  lastError     String?
+  lastAttemptAt DateTime?
+  deliveredAt   DateTime?
+
+  @@index([status, availableAt])
+  @@index([dedupKey, status])
+  @@index([alertId])
+}
+
+// One row per delivery attempt — the delivery log the channel page shows
+// (status + error text + latency). Kept even for simulate transports so the
+// audit story is identical across modes.
+model DeliveryLog {
+  id         String   @id @default(cuid())
+  outboxId   String
+  channelId  String?
+  kind       String // adapter used: telegram | bale | webhook | email | mattermost | jira | redmine | simulate
+  ok         Boolean
+  statusCode Int?
+  error      String?
+  ref        String? // created-ticket reference for ticketing kinds (Jira issue key, Redmine #id) — null otherwise
+  latencyMs  Int      @default(0)
+  at         DateTime @default(now())
+
+  @@index([outboxId])
+  @@index([channelId, at])
+}
+
+model OnCallEntry {
+  id           String @id @default(cuid())
+  engineerName String
+  role         String
+  handle       String
+  dayOfWeek    Int // 0=Sunday … 6=Saturday
+  startMinute  Int // minutes from midnight
+  endMinute    Int // may wrap past midnight
+
+  @@index([dayOfWeek])
+}
+
+// v2.6 escalation policy — when a DETECTED incident stays unacknowledged
+// past `timeoutMin`, the engine pages the secondary on-call (and informs the
+// executive channel). Single fleet-wide row; raw-SQL access (HMR-safe pattern
+// of the other governance tables).
+model EscalationPolicy {
+  id              String    @id @default(cuid())
+  name            String
+  timeoutMin      Int       @default(2) // unacknowledged minutes before the page
+  appliesTo       String    @default("critical") // critical | all
+  enabled         Boolean   @default(true)
+  timesEscalated  Int       @default(0)
+  lastEscalatedAt DateTime?
+  createdAt       DateTime  @default(now())
+}
+
+// v2.4 cron-style report schedules. Same no-FK + raw-SQL access pattern as
+// the other governance tables (HMR safety under prisma db push).
+model ReportSchedule {
+  id          String    @id @default(cuid())
+  label       String
+  frequency   String // weekly | monthly
+  dayOfWeek   Int? // 0=Sunday … 6=Saturday (weekly)
+  dayOfMonth  Int? // 1-28 (monthly)
+  hour        Int // 0-23 UTC
+  periodHours Int // legacy window for template-era rows; the executive template always uses the Jalali month
+  tenantId    String? // null = fleet-wide scope
+  enabled     Boolean   @default(true)
+  lastRunAt   DateTime?
+  createdAt   DateTime  @default(now())
+  // : which template a schedule produces, in which language.
+  kind        String    @default("executive") // executive | statement | incident
+  language    String    @default("en") // en | fa
+
+  @@index([enabled])
+}
+
+// v2.5: audit trail of schedule firings — every due-run and Run-now, success
+// or failure, with duration + the produced report. Label is snapshotted so
+// history stays readable after a schedule is renamed or deleted.
+// No FK to ReportSchedule on purpose: raw-SQL access (HMR-safe under db push).
+model ScheduleRun {
+  id         String   @id @default(cuid())
+  scheduleId String
+  label      String
+  trigger    String   @default("due") // due | manual
+  startedAt  DateTime
+  durationMs Int
+  success    Boolean  @default(true)
+  reportId   String?
+  fileName   String?
+  fileSize   Int?
+  error      String?
+  createdAt  DateTime @default(now())
+
+  @@index([scheduleId, startedAt])
+}
+
+// ═══ security and access ═══════════════════════
+
+// A human operator. Passwords are argon2id hashes (never reversible); the
+// password itself is never stored anywhere. `role` is the fleet-level role for
+// single-tenant installs; Membership rows scope multi-tenant access.
+model User {
+  id           String       @id @default(cuid())
+  email        String       @unique
+  name         String
+  passwordHash String
+  role         String       @default("viewer") // owner | admin | engineer | executive | viewer
+  locale       String       @default("en") // en | fa (per-user, not per-browser)
+  failedLogins Int          @default(0) // consecutive failures for lockout
+  lockedUntil  DateTime? // lockout after 5 failures / 15 minutes
+  lastLoginAt  DateTime?
+  disabled     Boolean      @default(false) // admin can suspend an account; disabled users cannot log in
+  sessions     Session[]
+  memberships  Membership[]
+  apiTokens    ApiToken[]
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  @@index([email])
+}
+
+// Server-side session (httpOnly cookie, SameSite=Lax, idle 8h, abs 7d).
+model Session {
+  id             String   @id @default(cuid())
+  tokenHash      String   @unique // sha256 of the cookie value; raw value never stored
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt      DateTime @default(now())
+  lastSeenAt     DateTime @default(now()) // idle timeout anchor
+  absoluteExpiry DateTime // createdAt + 7d, never extended
+  userAgent      String?
+  ip             String?
+
+  @@index([userId])
+  @@index([absoluteExpiry])
+}
+
+// Machine access: hashed, prefix-visible, scoped, expiring.
+model ApiToken {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name       String
+  prefix     String // first 8 chars, shown in the UI for identification
+  tokenHash  String    @unique // sha256 of the raw token
+  scopes     String    @default("read") // read | write (write covers mutations)
+  expiresAt  DateTime?
+  lastUsedAt DateTime?
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([userId])
+}
+
+// user ↔ tenant ↔ role. A user may belong to several tenants
+// with different roles; fleet-level powers come from User.role instead.
+model Membership {
+  id       String @id @default(cuid())
+  userId   String
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenantId String
+  role     String @default("viewer") // tenant-admin | engineer | executive | viewer
+
+  @@unique([userId, tenantId])
+  @@index([tenantId])
+}
+
+// Append-only audit trail. Never updated, only
+// inserted; the Settings UI reads it in UI pass.
+model AuditLog {
+  id        String   @id @default(cuid())
+  ts        DateTime @default(now())
+  actorType String   @default("user") // user | system | token
+  actorId   String? // user id (null for system events)
+  actorName String? // snapshot for readability after user deletion
+  action    String // login | logout | login.failed | user.created | ...
+  detail    String? // human-readable context (no secrets, no tokens)
+  ip        String?
+  userAgent String?
+
+  @@index([ts])
+  @@index([action])
+}

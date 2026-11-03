@@ -1,0 +1,52 @@
+{
+  "id": "g03-grace",
+  "title": "Grace minutes: 20 minutes down with 15 minutes grace bills 5 minutes",
+  "human": "The contract forgives the first 15 minutes of downtime per month. A 20-minute outage is charged only for the remaining 5 minutes: 10 000 000 base + 5 × 1 000 000 = 15 000 000 IRR. Grace is subtracted once per window, never per outage.",
+  "kind": "evaluate",
+  "contract": {
+    "version": 1,
+    "effectiveFrom": "2026-01-01T00:00:00.000Z",
+    "tenantId": "tenant-demo",
+    "serviceKey": null,
+    "targetAvailabilityPct": 99.9,
+    "windowKind": "gregorian-month",
+    "minChargeableOutageSec": 0,
+    "penalty": {
+      "mode": "fixedPerMinute",
+      "baseRials": 10000000,
+      "perMinuteRials": 1000000
+    },
+    "monthlyFeeRials": 1000000000,
+    "penaltyCapRials": null,
+    "graceMinutes": 15,
+    "excludePlanned": true,
+    "excludeExternal": true
+  },
+  "moneyModel": null,
+  "outages": [
+    {
+      "id": "i1",
+      "startSec": 0,
+      "endSec": 1200,
+      "category": "chargeable"
+    }
+  ],
+  "window": {
+    "startSec": 0,
+    "endSec": 2592000
+  },
+  "expect": {
+    "chargeableSec": 1200,
+    "plannedSec": 0,
+    "externalSec": 0,
+    "chargeableAfterGraceSec": 300,
+    "naiveAvailabilityPct": 99.9537,
+    "contractualAvailabilityPct": 99.9884,
+    "differencePct": 0.0347,
+    "tierPenaltyPct": null,
+    "penaltyBeforeCapRials": 15000000,
+    "penaltyRials": 15000000,
+    "targetMet": false,
+    "moneyFinalRials": null
+  }
+}

@@ -1,0 +1,135 @@
+# ═══════════════════════════════════════════════════════════════════════════
+# Sentinel-SLA — Helm chart values
+# Owner: Sentinel-SLA SRE
+# Override per environment with `helm install -f my-values.yaml` or
+# `--set sentinel.mode=live` for a quick switch.
+# Every env var named below is validated by src/server/config.ts (zod).
+# ═══════════════════════════════════════════════════════════════════════════
+
+# The engine (simulation loop, poller, schedulers) is single-instance by
+# design — schedulers are lock-protected, but keep
+# replicaCount at 1 unless sentinel.role is set to `web` (dashboard-only).
+replicaCount: 1
+
+image:
+  repository: sentinel-sla/app
+  tag: "2.0.0" # pin a digest in production
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: [] # e.g. [regcred] for a private Iranian registry
+
+nameOverride: ""
+fullnameOverride: ""
+
+service:
+  type: ClusterIP
+  port: 80 # service port → targetPort 3000 (Next.js app)
+  targetPort: 3000
+
+# ── Core app configuration (env-validated by src/server/config.ts) ─────────
+sentinel:
+  # demo = self-contained simulation engine (no external Prometheus needed);
+  # live = polls a real Prometheus (connection configured post-install).
+  mode: demo
+  # all = web + engine in one process; web = dashboard only; worker = engine.
+  role: all
+  # NOTE: in live mode the Prometheus connection (URL + auth) is admin-managed
+  # in the database (IntegrationSetting — the same row the setup wizard and
+  # install.sh write); it is intentionally NOT an env var. Configure it
+  # post-install in Settings → Integrations.
+  live:
+    pollIntervalSec: 15
+  # Public base URL used in notification links (ack links). Set to the
+  # ingress host in production.
+  publicBaseUrl: ""
+  # Ack-link signing secret (min 32 chars) — generate with `openssl rand -hex 32`.
+  # Leave empty only for demo. Prefer injecting via an existing Secret (below).
+  ackSecret: ""
+
+# ── Database ────────────────────────────────────────────────────────────────
+database:
+  # Prisma connection string. Default: SQLite on the persistent volume —
+  # the only supported database (PostgreSQL is not supported yet).
+  url: "file:/data/sentinel.db"
+  # Reference an existing Secret instead of the plaintext url above:
+  # the Secret key must be `DATABASE_URL`. Takes precedence when set.
+  existingSecret: ""
+
+# ── Persistent storage for the SQLite DB and archived PDF reports ──────────
+persistence:
+  enabled: true
+  # existingClaim: ""
+  size: 5Gi
+  accessMode: ReadWriteOnce
+  storageClass: ""
+
+# The custom Go exporter sidecar (business metrics: money in Prometheus).
+exporter:
+  enabled: true
+  image:
+    repository: sentinel-sla/exporter
+    tag: "2.0.0"
+  listen: ":9108"
+  # the sidecar talks to the app container on the pod-local address
+  apiBase: http://localhost:3000
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 512Mi
+  limits:
+    cpu: "1"
+    memory: 1Gi
+
+# HPA for the app deployment (requires metrics-server). Only meaningful
+# with sentinel.role=web (a second engine instance would double-poll).
+autoscaling:
+  enabled: false
+  minReplicas: 2
+  maxReplicas: 6
+  targetCPUUtilizationPercentage: 80
+
+ingress:
+  enabled: false
+  className: nginx
+  annotations: {}
+    # cert-manager.io/cluster-issuer: letsencrypt-prod
+    # nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+  hosts:
+    - host: sentinel.example.ir
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+    # - secretName: sentinel-tls
+    #   hosts: [sentinel.example.ir]
+
+# Prometheus Operator ServiceMonitor — scrape the exporter sidecar.
+serviceMonitor:
+  enabled: true
+  interval: 30s
+  path: /metrics
+  # `release` label matches the Prometheus operator release selector
+  # (standard prometheus-community/kube-prometheus-stack convention).
+  release: prometheus
+  labels: {}
+
+# Notification credentials — ALWAYS inject real values via a Kubernetes
+# Secret, never commit tokens to git. Chat IDs live in the database
+# (IntegrationSetting — seeded by the setup wizard / install.sh), not here.
+# The chart creates the Secret below when any value is non-empty; set
+# existingSecret to manage it yourself (keys: telegramBotToken, baleBotToken).
+notify:
+  telegramBotToken: "" # from @BotFather (min 8 chars)
+  baleBotToken: "" # from Bale @BotFather (min 8 chars)
+  existingSecret: ""
+
+# Extra environment variables for the app container (free-form map).
+env: {}
+  # NODE_ENV: production
+
+# Pod-level settings
+podAnnotations: {}
+nodeSelector: {}
+tolerations: []
+affinity: {}

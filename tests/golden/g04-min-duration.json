@@ -1,0 +1,76 @@
+{
+  "id": "g04-min-duration",
+  "title": "Minimum outage duration: a 30-second blip never counts",
+  "human": "The contract ignores outages shorter than 60 seconds. Three outages (2400 s, 30 s, 6000 s) count as 2400 + 6000 = 8400 chargeable seconds; availability 99.6759 % breaches 99.9 % but not 99.5 % → the 5 % tier applies = 50 000 000 IRR. The NAIVE metric still counts the 30-second blip (99.6748 %) — the 0.0012 % difference is exactly what the minimum-duration rule bought the provider.",
+  "kind": "evaluate",
+  "contract": {
+    "version": 1,
+    "effectiveFrom": "2026-01-01T00:00:00.000Z",
+    "tenantId": "tenant-demo",
+    "serviceKey": null,
+    "targetAvailabilityPct": 99.9,
+    "windowKind": "gregorian-month",
+    "minChargeableOutageSec": 60,
+    "penalty": {
+      "mode": "tiers",
+      "tiers": [
+        {
+          "belowPct": 99.9,
+          "penaltyPct": 5
+        },
+        {
+          "belowPct": 99.5,
+          "penaltyPct": 15
+        },
+        {
+          "belowPct": 99,
+          "penaltyPct": 30
+        }
+      ]
+    },
+    "monthlyFeeRials": 1000000000,
+    "penaltyCapRials": null,
+    "graceMinutes": 0,
+    "excludePlanned": true,
+    "excludeExternal": true
+  },
+  "moneyModel": null,
+  "outages": [
+    {
+      "id": "a",
+      "startSec": 0,
+      "endSec": 2400,
+      "category": "chargeable"
+    },
+    {
+      "id": "b",
+      "startSec": 5000,
+      "endSec": 5030,
+      "category": "chargeable"
+    },
+    {
+      "id": "c",
+      "startSec": 9000,
+      "endSec": 15000,
+      "category": "chargeable"
+    }
+  ],
+  "window": {
+    "startSec": 0,
+    "endSec": 2592000
+  },
+  "expect": {
+    "chargeableSec": 8400,
+    "plannedSec": 0,
+    "externalSec": 0,
+    "chargeableAfterGraceSec": 8400,
+    "naiveAvailabilityPct": 99.6748,
+    "contractualAvailabilityPct": 99.6759,
+    "differencePct": 0.0012,
+    "tierPenaltyPct": 5,
+    "penaltyBeforeCapRials": 50000000,
+    "penaltyRials": 50000000,
+    "targetMet": false,
+    "moneyFinalRials": null
+  }
+}

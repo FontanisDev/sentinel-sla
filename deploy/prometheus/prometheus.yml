@@ -1,0 +1,69 @@
+# ═══════════════════════════════════════════════════════════════════════════
+# Sentinel-SLA — Prometheus server configuration
+# Owner: Sentinel-SLA SRE
+# - Scrapes: itself, blackbox-exporter, sentinel-exporter (custom Go)
+# - Alert rules: deploy/prometheus/rules/sentinel-alerts.yml
+# - Firing alerts are routed to Alertmanager (docker: alertmanager:9093)
+# The fintech blackbox targets are relabelled through the blackbox exporter
+# probe endpoint (/probe?module=http_2xx&target=<url>).
+# ═══════════════════════════════════════════════════════════════════════════
+
+global:
+  scrape_interval: 15s # default scrape cadence for all jobs
+  evaluation_interval: 15s # alert rule evaluation cadence
+
+# Recording + alerting rules (bilingual financial alerts live here)
+rule_files:
+  - /etc/prometheus/rules/*.yml
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - alertmanager:9093
+
+scrape_configs:
+
+  # Prometheus self-monitoring (rule eval health, WAL replay, etc.)
+  - job_name: prometheus
+    static_configs:
+      - targets:
+          - localhost:9090
+
+  # Blackbox exporter self-scrape (probe module stats)
+  - job_name: blackbox-exporter
+    static_configs:
+      - targets:
+          - blackbox-exporter:9115 # container name; localhost would be Prometheus itself
+
+  # Custom Go exporter: business + financial metrics (Tomans, lost tx, MTTR)
+  - job_name: sentinel-exporter
+    static_configs:
+      - targets:
+          - sentinel-exporter:9108
+
+  # ── Fintech fleet probing through the blackbox exporter ──────────────────
+  # Each target is turned into a probe request; the `instance` label keeps the
+  # human-readable service URL so dashboards and alerts speak in service terms.
+  - job_name: fintech-blackbox
+    metrics_path: /probe
+    params:
+      module: [http_2xx]
+    static_configs:
+      - targets:
+          - https://api.psp.example.ir/v1/health # PSP payment gateway
+          - https://core.bank.example.ir/api/heartbeat # core banking adapter
+          - https://kyc.example.ir/status # KYC / identity verification
+          - https://risk.example.ir/health # risk & fraud scoring
+          - https://sms.example.ir/ping # SMS/OTP delivery
+          - https://wallet.example.ir/health # customer wallet
+    relabel_configs:
+      # 1) move the original URL into the `target` probe parameter
+      - source_labels: [__address__]
+        target_label: __param_target
+      # 2) keep the original URL as the `instance` label
+      - source_labels: [__param_target]
+        target_label: instance
+      # 3) send the actual probe request to the blackbox exporter container
+      - target_label: __address__
+        replacement: blackbox-exporter:9115

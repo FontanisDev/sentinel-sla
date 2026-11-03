@@ -1,0 +1,77 @@
+{
+  "id": "g18-full-chain",
+  "title": "Full chain: attribution 60 %, recovery 20 %, margin 25 %",
+  "human": "Gross 360 000 000 000 → attribution 60 % = 216 000 000 000 → recovery credit 20 % = 43 200 000 000 → net 172 800 000 000 → margin 25 % = 43 200 000 000 IRR final (fee basis). Every step is a separate evidence line; each line rounds at most once.",
+  "kind": "evaluate",
+  "contract": {
+    "version": 1,
+    "effectiveFrom": "2026-01-01T00:00:00.000Z",
+    "tenantId": "tenant-demo",
+    "serviceKey": null,
+    "targetAvailabilityPct": 99.9,
+    "windowKind": "gregorian-month",
+    "minChargeableOutageSec": 0,
+    "penalty": {
+      "mode": "tiers",
+      "tiers": [
+        {
+          "belowPct": 99.9,
+          "penaltyPct": 5
+        },
+        {
+          "belowPct": 99.5,
+          "penaltyPct": 15
+        },
+        {
+          "belowPct": 99,
+          "penaltyPct": 30
+        }
+      ]
+    },
+    "monthlyFeeRials": 1000000000,
+    "penaltyCapRials": null,
+    "graceMinutes": 0,
+    "excludePlanned": true,
+    "excludeExternal": true
+  },
+  "moneyModel": {
+    "version": 1,
+    "effectiveFrom": "2026-01-01T00:00:00.000Z",
+    "currency": "IRR",
+    "avgTicketRials": 2500000,
+    "txPerSecond": {
+      "kind": "static",
+      "tps": 40
+    },
+    "failureAttributionPct": 60,
+    "recoveryFactorPct": 20,
+    "basis": "fee",
+    "grossMarginOrFeePct": 25
+  },
+  "outages": [
+    {
+      "id": "i1",
+      "startSec": 0,
+      "endSec": 3600,
+      "category": "chargeable"
+    }
+  ],
+  "window": {
+    "startSec": 0,
+    "endSec": 2592000
+  },
+  "expect": {
+    "chargeableSec": 3600,
+    "plannedSec": 0,
+    "externalSec": 0,
+    "chargeableAfterGraceSec": 3600,
+    "naiveAvailabilityPct": 99.8611,
+    "contractualAvailabilityPct": 99.8611,
+    "differencePct": 0,
+    "tierPenaltyPct": 5,
+    "penaltyBeforeCapRials": 50000000,
+    "penaltyRials": 50000000,
+    "targetMet": false,
+    "moneyFinalRials": 43200000000
+  }
+}

@@ -1,0 +1,2 @@
+# PDF report renderer (reports/render_weasy.py). Needs the Pango system library.
+weasyprint>=68,<69

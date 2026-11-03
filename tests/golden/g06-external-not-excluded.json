@@ -1,0 +1,64 @@
+{
+  "id": "g06-external-not-excluded",
+  "title": "External-cause exclusion OFF: the upstream failure is chargeable",
+  "human": "The contract does not exclude external causes, so a 2-hour upstream failure counts like any other outage: availability 99.7222 % → 5 % tier = 50 000 000 IRR.",
+  "kind": "evaluate",
+  "contract": {
+    "version": 1,
+    "effectiveFrom": "2026-01-01T00:00:00.000Z",
+    "tenantId": "tenant-demo",
+    "serviceKey": null,
+    "targetAvailabilityPct": 99.9,
+    "windowKind": "gregorian-month",
+    "minChargeableOutageSec": 0,
+    "penalty": {
+      "mode": "tiers",
+      "tiers": [
+        {
+          "belowPct": 99.9,
+          "penaltyPct": 5
+        },
+        {
+          "belowPct": 99.5,
+          "penaltyPct": 15
+        },
+        {
+          "belowPct": 99,
+          "penaltyPct": 30
+        }
+      ]
+    },
+    "monthlyFeeRials": 1000000000,
+    "penaltyCapRials": null,
+    "graceMinutes": 0,
+    "excludePlanned": true,
+    "excludeExternal": false
+  },
+  "moneyModel": null,
+  "outages": [
+    {
+      "id": "e1",
+      "startSec": 0,
+      "endSec": 7200,
+      "category": "external"
+    }
+  ],
+  "window": {
+    "startSec": 0,
+    "endSec": 2592000
+  },
+  "expect": {
+    "chargeableSec": 7200,
+    "plannedSec": 0,
+    "externalSec": 0,
+    "chargeableAfterGraceSec": 7200,
+    "naiveAvailabilityPct": 99.7222,
+    "contractualAvailabilityPct": 99.7222,
+    "differencePct": 0,
+    "tierPenaltyPct": 5,
+    "penaltyBeforeCapRials": 50000000,
+    "penaltyRials": 50000000,
+    "targetMet": false,
+    "moneyFinalRials": null
+  }
+}
