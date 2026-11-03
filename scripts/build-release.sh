@@ -21,7 +21,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
-V="$(node -p 'JSON.parse(require("fs").readFileSync("package.json","utf8")).version')"
+V="$(bun -p 'JSON.parse(require("fs").readFileSync("package.json","utf8")).version')"
 case "$V" in 2.0.0) ;; *) echo "FAIL: refusing to build a release for version '$V' (expected 2.0.0)" >&2; exit 1 ;; esac
 
 command -v git >/dev/null 2>&1 || { echo "FAIL: git required to build the release tree" >&2; exit 1; }
@@ -33,7 +33,7 @@ if [ -n "$(git status --porcelain -- . ':!release')" ]; then
 fi
 
 echo "── 1/5 CycloneDX SBOM ──────────────────────────────────────────────────────"
-node scripts/gen-sbom.mjs
+bun scripts/gen-sbom.mjs
 SBOM="release/sentinel-sla-${V}.cdx.json"
 test -f "$SBOM"
 
@@ -75,7 +75,7 @@ TAGGED="$(git tag --list "v${V}" | head -1 || true)"
 # sha256sum entries are relative to release/ so `sha256sum -c` works in place
 ( cd release && sha256sum "sentinel-sla-${V}.tar.gz" "sentinel-sla-${V}.cdx.json" > SHA256SUMS )
 
-node - "$V" "$COMMIT" "$COMMIT_SHORT" "$TAGGED" "$TRACKED" <<'NODE'
+bun - "$V" "$COMMIT" "$COMMIT_SHORT" "$TAGGED" "$TRACKED" <<'NODE'
 const { readFileSync, statSync, writeFileSync } = require('node:fs');
 const { createHash } = require('node:crypto');
 const [V, COMMIT, COMMIT_SHORT, TAGGED, TRACKED] = process.argv.slice(2);
