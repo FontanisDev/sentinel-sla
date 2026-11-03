@@ -143,12 +143,12 @@ function isExecutable(p: string): boolean {
 
 /**
  * Resolve the PDF python interpreter. Order: REPORT_PYTHON → PYTHON_BIN →
- * `<cwd>/.venv/bin/python3` → first `python3` on PATH. Never guesses: when
+ * `<projectRoot>/.venv/bin/python3` → first `python3` on PATH. Never guesses: when
  * nothing resolves, returns null so the caller can say exactly what to set.
  */
-function detectReportPython(explicit: string | undefined): string | null {
+function detectReportPython(explicit: string | undefined, projectRoot: string): string | null {
   const candidates = [explicit, process.env.PYTHON_BIN].filter((v): v is string => Boolean(v));
-  const venv = path.join(process.cwd(), '.venv', 'bin', 'python3');
+  const venv = path.join(projectRoot, '.venv', 'bin', 'python3');
   if (isExecutable(venv)) candidates.push(venv);
   for (const dir of (process.env.PATH ?? '').split(path.delimiter)) {
     if (!dir) continue;
@@ -178,7 +178,7 @@ function loadConfig(): SentinelConfig {
     : path.join(projectRoot, 'data');
 
   const fontDir = detectFontDir(env.SENTINEL_FONT_DIR);
-  const reportPython = detectReportPython(env.REPORT_PYTHON);
+  const reportPython = detectReportPython(env.REPORT_PYTHON, projectRoot);
   const reportScript = env.REPORT_SCRIPT
     ? path.resolve(env.REPORT_SCRIPT)
     : path.join(projectRoot, 'reports', 'sla_report.py');
