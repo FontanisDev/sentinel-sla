@@ -272,6 +272,13 @@ async function ensureOwnerSession() {
     });
     if (res.status !== 201 && res.status !== 200) fail(`setup failed: ${res.status}`);
     mark('POST', '/api/auth/setup');
+    // Also verify login works after setup (exercises POST /api/auth/login)
+    const loginRes = await client.req('/api/auth/login', {
+      method: 'POST',
+      body: { email: OWNER_EMAIL, password: OWNER_PASSWORD },
+    });
+    if (loginRes.status !== 200) fail(`login after setup failed: ${loginRes.status}`);
+    mark('POST', '/api/auth/login');
     return;
   }
   const res = await client.req('/api/auth/login', {
