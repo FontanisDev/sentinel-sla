@@ -71,9 +71,10 @@ jobs:
         env:
           CONTRACT_OWNER_EMAIL: owner@contract.test
           CONTRACT_OWNER_PASSWORD: contract-owner-pass-2026
-          DATABASE_URL: file:../db/contract-ci.db
+          DATABASE_URL: file:${{ github.workspace }}/db/contract-ci.db
           SENTINEL_MODE: demo
         run: |
+          mkdir -p db
           bun run db:push
           PORT=3111 NODE_ENV=production HOSTNAME=0.0.0.0 bun .next/standalone/server.js &
           SERVER_PID=$!
